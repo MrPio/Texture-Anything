@@ -1,0 +1,4 @@
+.venv/
+objaverse 1.0.pkl
+objaverse xl.pkl
+objaverse_cleaned.csv
