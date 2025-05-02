@@ -5,4 +5,5 @@
 1-annotations/objaverse_cleaned.parquet
 .vscode/
 
-data/*
+data/0-annotations.pkl
+data/1-annotations_filtered.parquet
