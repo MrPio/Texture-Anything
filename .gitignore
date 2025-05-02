@@ -1,8 +1,8 @@
 .venv/
-objaverse 1.0.pkl
-objaverse xl.pkl
-objaverse_cleaned.csv
-objaverse_cleaned.parquet
+1-annotations/objaverse 1.0.pkl
+1-annotations/objaverse xl.pkl
+1-annotations/objaverse_cleaned.csv
+1-annotations/objaverse_cleaned.parquet
 .vscode/
 
 data/*
