@@ -1,4 +1,6 @@
 .venv/
+.objaverse/
+/**/.textures
 1-annotations/objaverse 1.0.pkl
 1-annotations/objaverse xl.pkl
 1-annotations/objaverse_cleaned.csv
