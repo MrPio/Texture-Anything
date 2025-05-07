@@ -1,6 +1,8 @@
 import PIL.Image
 import bpy
 import PIL
+import numpy as np
+from ..utils import plot_images
 
 
 def __reset_scene():
@@ -84,8 +86,8 @@ def get_mesh_stats(mesh) -> dict:
     return {'uv_count': len(mesh.data.uv_layers), 'texture_count': texture_count}
 
 
-def get_textures() -> list[PIL.Image.Image]:
-    """Unpack all the texture images in the scene
+def get_textures(plot: bool = False) -> list[PIL.Image.Image]:
+    """Unpack all the texture images in the scene as PIL
     """
 
     embedded_images = [
@@ -94,14 +96,10 @@ def get_textures() -> list[PIL.Image.Image]:
 
     if embedded_images:
         for i, img in enumerate(embedded_images):
-            try:
-                _ = img.pixels[:1]  # Touch pixel data to force load
-            except:
-                print(f"Warning: {img.name} has no pixel data.")
-                continue
-            img.unpack(method='USE_ORIGINAL')
-            img.filepath_raw = f".textures/texture_{i}.png"
-            img.file_format = 'PNG'
-            img.save()
-            images_pil.append(PIL.Image.open(f".textures/texture_{i}.png"))
+            pixels = (np.array(img.pixels)*255).astype(np.uint8)
+            pixels = pixels.reshape((*img.size, 4))
+            image_pil = PIL.Image.fromarray(pixels, 'RGBA')
+            images_pil.append(image_pil)
+    if plot and len(images_pil) > 0:
+        plot_images(images_pil, col=min(4, len(images_pil)))
     return images_pil

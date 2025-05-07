@@ -3,3 +3,4 @@ __email__ = "valeriomorelli50@gmail.com"
 __license__ = "Apache-2.0"
 
 from .blender.scene import load_glb, get_textures, get_scene_stats, get_mesh_stats
+from .utils import plot_images
