@@ -20,4 +20,5 @@ def plot_images(images: list[Image.Image], size=4, cols: int = 1):
     for i, img in enumerate(images):
         axes[i].imshow(img)
         axes[i].set_title(f"({img.size[0]}×{img.size[0]})")
+        axes[i].axis('off')
     plt.show()

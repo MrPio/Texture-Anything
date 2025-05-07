@@ -95,7 +95,7 @@ def get_textures(plot: bool = False) -> list[PIL.Image.Image]:
     images_pil = []
 
     if embedded_images:
-        for i, img in enumerate(embedded_images):
+        for img in embedded_images:
             pixels = (np.array(img.pixels)*255).astype(np.uint8)
             pixels = pixels.reshape((*img.size, 4))
             image_pil = PIL.Image.fromarray(pixels, 'RGBA')
