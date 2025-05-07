@@ -1,6 +1,7 @@
 .venv/
 .objaverse/
 /**/.textures
+/**/__pycache__/
 1-annotations_filtering/objaverse 1.0.pkl
 1-annotations_filtering/objaverse xl.pkl
 1-annotations_filtering/objaverse_cleaned.csv
