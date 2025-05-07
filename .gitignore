@@ -1,10 +1,10 @@
 .venv/
 .objaverse/
 /**/.textures
-1-annotations/objaverse 1.0.pkl
-1-annotations/objaverse xl.pkl
-1-annotations/objaverse_cleaned.csv
-1-annotations/objaverse_cleaned.parquet
+1-annotations_filtering/objaverse 1.0.pkl
+1-annotations_filtering/objaverse xl.pkl
+1-annotations_filtering/objaverse_cleaned.csv
+1-annotations_filtering/objaverse_cleaned.parquet
 .vscode/
 
 data/0-annotations.pkl
