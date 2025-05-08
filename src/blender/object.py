@@ -3,10 +3,14 @@ import bpy
 import PIL
 import numpy as np
 from ..utils import plot_images
+import bmesh
+import bmesh
+from PIL import Image, ImageDraw
 
 
 def get_mesh_stats(mesh) -> dict:
-    """Get the properties of a given mesh in the current scene."""
+    """Get the properties of a given mesh in the current scene.
+    Properties are `uv_count`, `texture_count`"""
     assert mesh.type == "MESH"
 
     texture_count = 0
@@ -51,3 +55,28 @@ def get_diffuse_textures(mesh, plot: bool = False) -> list[PIL.Image.Image]:
         plot_images(images_pil, cols=min(4, len(images_pil)))
 
     return images_pil
+
+
+def draw_uv_map(mesh, size=1024, stroke=1) -> Image.Image:
+    bm = bmesh.new()
+    bm.from_mesh(mesh.data)
+    uv_layer = bm.loops.layers.uv.active
+    if not uv_layer:
+        raise Exception("No UV layers found on the mesh")
+
+    # === Create white transparent image ===
+    img = Image.new("RGBA", (size, size), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(img)
+
+    # === Draw UV edges ===
+    for face in bm.faces:
+        uv_coords = [loop[uv_layer].uv for loop in face.loops]
+        if len(uv_coords) < 2:
+            continue
+        # Scale and convert UVs to pixel coordinates (flip V axis)
+        points = [(int(uv.x * size), int(uv.y * size)) for uv in uv_coords]
+        # Close the loop
+        points.append(points[0])
+        draw.line(points, fill=(0, 0, 0, 255), width=stroke)
+
+    return img

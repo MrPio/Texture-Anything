@@ -14,6 +14,7 @@ def __reset_scene():
     Args:
         clear_collections (bool, optional): If clear the collections too. Defaults to True.
     """
+    bpy.ops.object.mode_set(mode='OBJECT')
 
     # 1. Delete all objects
     bpy.ops.object.select_all(action='SELECT')
@@ -48,7 +49,7 @@ def __reset_scene():
 
     global __scene_resetted
     __scene_resetted += 1
-    if __scene_resetted % 10 == 0:
+    if __scene_resetted % 100 == 0:
         bpy.ops.wm.read_factory_settings(use_empty=True)
         
 
@@ -70,7 +71,7 @@ def load_glb(path: str, reset_scene: bool = True) -> list:
 
 def get_scene_stats() -> dict:
     """Get the properties of the current scene.
-    """
+    Properties are `mesh_count`"""
     mesh_objects = [
         obj for obj in bpy.context.scene.objects if obj.type == 'MESH']
     return {'mesh_count': len(mesh_objects)}
