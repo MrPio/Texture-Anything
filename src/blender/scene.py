@@ -5,6 +5,9 @@ import numpy as np
 from ..utils import plot_images
 
 
+__scene_resetted = 0
+
+
 def __reset_scene():
     """Delete all the objects from the current scene
 
@@ -42,6 +45,12 @@ def __reset_scene():
     # Note: in some versions of Blender you might need to toggle these flags.
     # bpy.ops.outliner.orphans_purge(
     #     do_local_ids=True, do_linked_ids=True, do_recursive=True)
+
+    global __scene_resetted
+    __scene_resetted += 1
+    if __scene_resetted % 10 == 0:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        
 
 
 def load_glb(path: str, reset_scene: bool = True) -> list:
