@@ -1,5 +1,4 @@
 import pandas as pd
-import os
 from tqdm import tqdm
 import os
 import objaverse
@@ -8,11 +7,14 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "..")))
 from src import *
 
-"""Generate statistics on GLB files. On a single compute node, takes 8m:30s for 26_000 objects.
+"""Generate statistics on GLB files. 
+On a single compute node, takes 8m:30s for 26_000 objects.
 Please make sure that you have downloaded the first DOWNLOADED_OBJECTS of the annotations table before running this script.
+This script is CWD-dependent
 """
 
 DOWNLOADED_OBJECTS = 26_000
+
 objaverse._VERSIONED_PATH = os.path.join("../.objaverse", "hf-objaverse-v1")
 annotations = pd.read_parquet("../data/2-annotations_filtered_by_thumbnails.parquet")
 if os.path.exists("./statistics.parquet"):
