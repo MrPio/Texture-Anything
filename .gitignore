@@ -11,3 +11,4 @@
 data/0-annotations.pkl
 data/1-annotations_filtered.parquet
 data/dataset/**
+.shapenet/
