@@ -11,7 +11,7 @@ The goal of this project is to train a ControlNet on UV conditioning in order to
 The repository is structured in cronological sections, each containing several jupyter notebooks. The `src` module holds the recurrent code.
 
 > [!NOTE]  
-> As I haven't included the `.parquet` intermediary files due to their size, you should run all the notebooks one after the other, in order. The same holds for the final dataset, which is stored in `data/dataset/`
+> As I haven't included the `.parquet` intermediary files due to their size, you should run all the notebooks one after the other, in order. The same holds for the final dataset, which is stored in `data/dataset/objaverse/`
 
 ### 1 Annotation Filtering
 

@@ -37,11 +37,11 @@ selected_uids = statistics[statistics["diffuseCount"] == 1].index
 objaverse._VERSIONED_PATH = Path(ROOT_DIR, ".objaverse/hf-objaverse-v1")
 gbls = objaverse.load_objects(annotations.index[:DOWNLOADED_OBJECTS].to_list(), download_processes=256)
 for folder in ["render", "uv", "diffuse", "caption"]:
-    os.makedirs(Path(ROOT_DIR, f"data/dataset/{folder}"), exist_ok=True)
+    os.makedirs(Path(ROOT_DIR, f"data/dataset/objaverse/{folder}"), exist_ok=True)
 
 already_downloaded_uids = [
     os.path.splitext(x)[0]
-    for x in os.listdir(Path(ROOT_DIR, f"data/dataset/{'uv' if args.computation_node else 'render'}"))
+    for x in os.listdir(Path(ROOT_DIR, f"data/dataset/objaverse/{'uv' if args.computation_node else 'render'}"))
 ]
 
 
@@ -64,8 +64,8 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
             continue
 
         # Commit
-        diffuse.save(Path(ROOT_DIR, f"data/dataset/diffuse/{uid}.png"))
-        uv_map.save(Path(ROOT_DIR, f"data/dataset/uv/{uid}.png"))
+        diffuse.save(Path(ROOT_DIR, f"data/dataset/objaverse/diffuse/{uid}.png"))
+        uv_map.save(Path(ROOT_DIR, f"data/dataset/objaverse/uv/{uid}.png"))
     else:
         # Download thumbnail (not possible in computation nodes)
         thumbnail = requests.get(annotations.loc[uid]["thumbnail"]).content
@@ -73,5 +73,5 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
         # Skip if the render resolution is less than 0.2MP
         if render.size[0] * render.size[1] < MIN_RENDER_RES:
             continue
-        with open(Path(ROOT_DIR, f"data/dataset/render/{uid}.jpg"), "wb") as f:
+        with open(Path(ROOT_DIR, f"data/dataset/objaverse/render/{uid}.jpg"), "wb") as f:
             f.write(thumbnail)

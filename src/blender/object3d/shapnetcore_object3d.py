@@ -1,0 +1,22 @@
+from pathlib import Path
+from .object3d import Object3D
+from PIL import Image
+import os
+
+class ShapNetCoreObject3D(Object3D):
+    def __init__(self, uid: str, path: str):
+        super(ShapNetCoreObject3D, self).__init__(uid, path)
+
+    @property
+    def textures(self) -> list[Image.Image]:
+        """Load all the diffuse texture images in the image folder as PIL"""
+        files = [x.image.name for x in self._mesh_nodes]
+        return [Image.open(self.path.parent.parent / "images" / x) for x in files]
+
+    @property
+    def screenshots(self) -> list[Image.Image]:
+        """Load the screenshots, if available"""
+        if not os.path.exists(self.path.parent.parent / "screenshots"):
+            return []
+        files = os.listdir(self.path.parent.parent / "screenshots")
+        return [Image.open(self.path.parent.parent / "screenshots" / x) for x in files]
