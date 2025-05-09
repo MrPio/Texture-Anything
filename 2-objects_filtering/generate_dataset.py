@@ -17,7 +17,7 @@ import argparse
 On a single compute node, takes 50m for 6_000 objects.
 This script is CWD-independent"""
 
-DOWNLOADED_OBJECTS = 26_000
+DOWNLOADED_OBJECTS = 45_000
 MIN_UV_DENSITY = 0.01
 MIN_RENDER_RES = 200_000
 TASK_ID = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
@@ -35,22 +35,23 @@ annotations = pd.read_parquet(Path(ROOT_DIR, "data/2-annotations_filtered_by_thu
 statistics = pd.read_parquet(Path(ROOT_DIR, "2-objects_filtering/statistics.parquet"))
 selected_uids = statistics[statistics["diffuseCount"] == 1].index
 objaverse._VERSIONED_PATH = Path(ROOT_DIR, ".objaverse/hf-objaverse-v1")
-gbls = objaverse.load_objects(annotations.index[:DOWNLOADED_OBJECTS].to_list(), download_processes=256)
+paths = objaverse.load_objects(annotations.index[:DOWNLOADED_OBJECTS].to_list(), download_processes=256)
 for folder in ["render", "uv", "diffuse", "caption"]:
     os.makedirs(Path(ROOT_DIR, f"data/dataset/objaverse/{folder}"), exist_ok=True)
 
-already_downloaded_uids = [
+already_processed_uids = [
     os.path.splitext(x)[0]
     for x in os.listdir(Path(ROOT_DIR, f"data/dataset/objaverse/{'uv' if args.computation_node else 'render'}"))
 ]
+print(f"Already processed {len(already_processed_uids)} objects")
 
 
 for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
-    if uid in already_downloaded_uids:
+    if uid in already_processed_uids:
         continue
 
     if args.computation_node:
-        obj = ObjaverseObject3D(uid, gbls[uid])
+        obj = ObjaverseObject3D(uid, paths[uid])
 
         # Extract diffuse texture
         diffuse = obj.textures[0]
@@ -61,7 +62,7 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
 
         # Bake UV map
         uv_map = obj.draw_uv_map()
-        
+
         # Skip if UV is too sparse
         if compute_opacity(uv_map) < MIN_UV_DENSITY:
             continue

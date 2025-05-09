@@ -12,7 +12,7 @@ class Object3D(abc.ABC):
         self.uid = uid
         self.path = Path(path) if path is str else path
 
-        self.objects = load_model(path, reset_scene=True)
+        self.objects = load_model(str(self.path), reset_scene=True)
         self.meshes = [x for x in self.objects if x.type == "MESH"]
         self.has_one_mesh = len(self.meshes) == 1
         self.mesh = self.meshes[0]

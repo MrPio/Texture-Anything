@@ -1,8 +1,5 @@
-import PIL.Image
 import bpy
 import PIL
-import numpy as np
-from ..utils import plot_images
 
 
 __scene_resetted = 0
