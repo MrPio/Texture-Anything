@@ -50,15 +50,18 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
         continue
 
     if args.computation_node:
+        obj = ObjaverseObject3D(uid, gbls[uid])
+
         # Extract diffuse texture
-        mesh = next(x for x in load_model(gbls[uid]) if x.type == "MESH")
-        diffuse = get_diffuse_textures(mesh)[0]
+        diffuse = obj.textures[0]
+
         # Skip if texture is not square
         if diffuse.size[0] != diffuse.size[1]:
             continue
 
         # Bake UV map
-        uv_map = draw_uv_map(mesh, size=1024, stroke=1)
+        uv_map = obj.draw_uv_map()
+        
         # Skip if UV is too sparse
         if compute_opacity(uv_map) < MIN_UV_DENSITY:
             continue

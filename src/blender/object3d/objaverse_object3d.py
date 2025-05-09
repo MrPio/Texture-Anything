@@ -1,10 +1,11 @@
+from pathlib import Path
 from .object3d import Object3D
 import numpy as np
 from PIL import Image
 
 
 class ObjaverseObject3D(Object3D):
-    def __init__(self, uid: str, path: str):
+    def __init__(self, uid: str, path: str | Path):
         super(ObjaverseObject3D, self).__init__(uid, path)
 
     @property
@@ -12,7 +13,7 @@ class ObjaverseObject3D(Object3D):
         """Unpack all the diffuse texture images in the scene as PIL"""
         assert self.has_one_mesh
 
-        diffuse_images = set(x for x in self._mesh_nodes if x.image)
+        diffuse_images = set(x.image for x in self._mesh_nodes if x.image)
         embedded_images = [img for img in diffuse_images if img.packed_file is not None]
         images_pil = []
 

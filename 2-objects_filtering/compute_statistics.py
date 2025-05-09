@@ -1,47 +1,55 @@
+from pathlib import Path
+import objaverse
 import pandas as pd
 from tqdm import tqdm
 import os
-import objaverse
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "..")))
+SCRIPT_DIR = Path(__file__).parent.resolve()
+sys.path.insert(0, str(SCRIPT_DIR.parent))
 from src import *
 
-"""Generate statistics on GLB files. 
-On a single compute node, takes 8m:30s for 26_000 objects.
-Please make sure that you have downloaded the first DOWNLOADED_OBJECTS of the annotations table before running this script.
-This script is CWD-dependent
+"""Generate statistics on OBJ files. 
+Please make sure that you have downloaded the first `DOWNLOADED_OBJECTS` of the annotations table before running this script.
+This script is CWD-independent
 """
 
 DOWNLOADED_OBJECTS = 26_000
+TASK_ID = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
+NUM_TASK = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", 1))
 
 objaverse._VERSIONED_PATH = os.path.join("../.objaverse", "hf-objaverse-v1")
 annotations = pd.read_parquet("../data/2-annotations_filtered_by_thumbnails.parquet")
-if os.path.exists("./statistics.parquet"):
-    statistics = pd.read_parquet("./statistics.parquet")
+paths = objaverse.load_objects(annotations["uid"][:DOWNLOADED_OBJECTS].to_list())
+
+statistics_path = Path(SCRIPT_DIR, f"statistics{TASK_ID if NUM_TASK>1 else ''}.parquet")
+if os.path.exists(statistics_path):
+    statistics = pd.read_parquet(statistics_path)
 else:
     statistics = pd.DataFrame(
         {
             "meshCount": pd.Series(dtype="int"),
             "uvCount": pd.Series(dtype="int"),
             "diffuseCount": pd.Series(dtype="int"),
+            "faceCount": pd.Series(dtype="int"),
         }
     )
     statistics.index.name = "uid"
-paths = objaverse.load_objects(annotations["uid"][:DOWNLOADED_OBJECTS].to_list(), download_processes=1)
 
 num_meshes = []
-for uid, path in tqdm(paths.items()):
+for uid, path in tqdm(list(paths.items())[TASK_ID::NUM_TASK]):
     if uid in statistics.index:
         continue
-    objects = load_model(path)
-    scene_stats = get_scene_stats()
-    if scene_stats["mesh_count"] == 1:
-        mesh = next(x for x in objects if x.type == "MESH")
-        mesh_stats = get_mesh_stats(mesh)
+
+    if not Path(path).exists():
+        continue
+    obj = ObjaverseObject3D(uid, path)
+    if obj.has_one_mesh:
+        mesh_stats = obj.mesh_stats
+
     statistics.loc[uid] = [
-        scene_stats["mesh_count"],
-        mesh_stats["uv_count"] if scene_stats["mesh_count"] == 1 else None,
-        mesh_stats["texture_count"] if scene_stats["mesh_count"] == 1 else None,
+        len(obj.meshes),
+        mesh_stats["uv_count"] if len(obj.meshes) == 1 else None,
+        mesh_stats["texture_count"] if len(obj.meshes) == 1 else None,
     ]
-statistics.to_parquet("./statistics.parquet")
+statistics.to_parquet(statistics_path)

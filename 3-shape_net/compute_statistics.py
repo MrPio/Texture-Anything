@@ -34,19 +34,18 @@ num_meshes = []
 for uid, path in tqdm(list(paths.items())[TASK_ID::NUM_TASK]):
     if uid in statistics.index:
         continue
-    obj_path = os.path.join(path, "models", "model_normalized.obj")
-    if not os.path.exists(obj_path):
+
+    obj_path = Path(path) / "models" / "model_normalized.obj"
+    if not obj_path.exists():
         continue
-    objects = load_model(obj_path)
-    scene_stats = get_scene_stats()
-    if scene_stats["mesh_count"] == 1:
-        mesh = next(x for x in objects if x.type == "MESH")
-        mesh_stats = get_mesh_stats(mesh)
+    obj = ShapNetCoreObject3D(uid, obj_path)
+    if obj.has_one_mesh:
+        mesh_stats = obj.mesh_stats
 
     statistics.loc[uid] = [
-        scene_stats["mesh_count"],
-        mesh_stats["uv_count"] if scene_stats["mesh_count"] == 1 else None,
-        mesh_stats["texture_count"] if scene_stats["mesh_count"] == 1 else None,
-        mesh_stats["face_count"] if scene_stats["mesh_count"] == 1 else None,
+        len(obj.meshes),
+        mesh_stats["uv_count"] if len(obj.meshes) == 1 else None,
+        mesh_stats["texture_count"] if len(obj.meshes) == 1 else None,
+        mesh_stats["face_count"] if len(obj.meshes) == 1 else None,
     ]
 statistics.to_parquet(statistics_path)

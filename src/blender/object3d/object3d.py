@@ -8,14 +8,14 @@ from PIL import Image, ImageDraw
 
 
 class Object3D(abc.ABC):
-    def __init__(self, uid: str, path: str):
+    def __init__(self, uid: str, path: str | Path):
         self.uid = uid
-        self.path = Path(path)
+        self.path = Path(path) if path is str else path
 
-        self.objects = load_model(path)
-        meshes = [x for x in self.objects if x.type == "MESH"]
-        self.has_one_mesh = len(meshes) == 1
-        self.mesh = meshes[0]
+        self.objects = load_model(path, reset_scene=True)
+        self.meshes = [x for x in self.objects if x.type == "MESH"]
+        self.has_one_mesh = len(self.meshes) == 1
+        self.mesh = self.meshes[0]
 
     @property
     def _mesh_nodes(self):

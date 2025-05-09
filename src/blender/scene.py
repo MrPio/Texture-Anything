@@ -14,7 +14,10 @@ def __reset_scene():
     Args:
         clear_collections (bool, optional): If clear the collections too. Defaults to True.
     """
-    bpy.ops.object.mode_set(mode="OBJECT")
+    try:    
+        bpy.ops.object.mode_set(mode="OBJECT")
+    except:
+        pass
 
     # 1. Delete all objects
     bpy.ops.object.select_all(action="SELECT")
@@ -64,7 +67,7 @@ def load_model(path: str, reset_scene: bool = True) -> list:
     """
     if reset_scene:
         __reset_scene()
-    (bpy.ops.wm.obj_import if ".obj" in path else bpy.ops.import_scene.gltf)(filepath=path)
+    (bpy.ops.wm.obj_import if path.endswith('.obj') else bpy.ops.import_scene.gltf)(filepath=path)
     return list(bpy.context.scene.objects)
 
 

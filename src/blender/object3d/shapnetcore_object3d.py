@@ -4,7 +4,7 @@ from PIL import Image
 import os
 
 class ShapNetCoreObject3D(Object3D):
-    def __init__(self, uid: str, path: str):
+    def __init__(self, uid: str, path: str|Path):
         super(ShapNetCoreObject3D, self).__init__(uid, path)
 
     @property
