@@ -34,7 +34,7 @@ num_meshes = []
 for uid, path in tqdm(paths.items()):
     if uid in statistics.index:
         continue
-    objects = load_glb(path)
+    objects = load_model(path)
     scene_stats = get_scene_stats()
     if scene_stats["mesh_count"] == 1:
         mesh = next(x for x in objects if x.type == "MESH")

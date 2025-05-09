@@ -9,4 +9,4 @@
 #SBATCH --mem=8G
 #SBATCH --array=0-19
 
-srun python 2-objects_filtering/generate_dataset.py --computation-node
+srun python 3-shape_net/compute_statistics.py

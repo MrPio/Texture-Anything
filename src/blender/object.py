@@ -24,7 +24,11 @@ def get_mesh_stats(mesh) -> dict:
                             if link.to_socket.name == "Base Color":
                                 texture_count += 1
 
-    return {"uv_count": len(mesh.data.uv_layers), "texture_count": texture_count}
+    return {
+        "uv_count": len(mesh.data.uv_layers),
+        "texture_count": texture_count,
+        "face_count": len(mesh.data.polygons),
+    }
 
 
 def get_diffuse_textures(mesh, plot: bool = False) -> list[PIL.Image.Image]:

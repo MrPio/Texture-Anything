@@ -51,7 +51,7 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
 
     if args.computation_node:
         # Extract diffuse texture
-        mesh = next(x for x in load_glb(gbls[uid]) if x.type == "MESH")
+        mesh = next(x for x in load_model(gbls[uid]) if x.type == "MESH")
         diffuse = get_diffuse_textures(mesh)[0]
         # Skip if texture is not square
         if diffuse.size[0] != diffuse.size[1]:

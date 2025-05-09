@@ -54,18 +54,18 @@ def __reset_scene():
         
 
 
-def load_glb(path: str, reset_scene: bool = True) -> list:
-    """Load a GLB 3D model
+def load_model(path: str, reset_scene: bool = True) -> list:
+    """Load a GLB or OBJ 3D model
 
     Args:
-        path (str): the path of the GLB file
+        path (str): the path of the GLB/OBJ file
 
     Returns:
         list: a list of Blender's objects in the scene.
     """
     if reset_scene:
         __reset_scene()
-    bpy.ops.import_scene.gltf(filepath=path)
+    (bpy.ops.wm.obj_import if '.obj' in path else bpy.ops.import_scene.gltf)(filepath=path)
     return list(bpy.context.scene.objects)
 
 
