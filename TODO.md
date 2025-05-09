@@ -5,3 +5,4 @@
     - [ ] The loss should not care about part of the texture not mapped?
     - [ ] Try ShapNetCore, now they've granted me access
     - [ ] Generate captions from renders
+    - [ ] Generate the rendering of objects
