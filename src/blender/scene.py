@@ -14,7 +14,7 @@ def __reset_scene():
     Args:
         clear_collections (bool, optional): If clear the collections too. Defaults to True.
     """
-    try:    
+    try:
         bpy.ops.object.mode_set(mode="OBJECT")
     except:
         pass
@@ -67,29 +67,5 @@ def load_model(path: str, reset_scene: bool = True) -> list:
     """
     if reset_scene:
         __reset_scene()
-    (bpy.ops.wm.obj_import if path.endswith('.obj') else bpy.ops.import_scene.gltf)(filepath=path)
+    (bpy.ops.wm.obj_import if path.endswith(".obj") else bpy.ops.import_scene.gltf)(filepath=path)
     return list(bpy.context.scene.objects)
-
-
-def get_scene_stats() -> dict:
-    """Get the properties of the current scene.
-    Properties are `mesh_count`"""
-    mesh_objects = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
-    return {"mesh_count": len(mesh_objects)}
-
-
-def get_textures(plot: bool = False) -> list[PIL.Image.Image]:
-    """Unpack all the texture images in the scene as PIL"""
-
-    embedded_images = [img for img in bpy.data.images if img.packed_file is not None]
-    images_pil = []
-
-    if embedded_images:
-        for img in embedded_images:
-            pixels = (np.array(img.pixels) * 255).astype(np.uint8)
-            pixels = pixels.reshape((*img.size, 4))
-            image_pil = PIL.Image.fromarray(pixels, "RGBA")
-            images_pil.append(image_pil)
-    if plot and len(images_pil) > 0:
-        plot_images(images_pil, col=min(4, len(images_pil)))
-    return images_pil
