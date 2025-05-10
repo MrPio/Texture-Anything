@@ -1,4 +1,16 @@
-# How I was able to install `mpi4py` on Cineca's Leonardo HPC
+# Lessons Learned
+
+## How I was able to achieve massive parallelism
+
+Set `--ntasks-per-node=16` and GRES amount.
+
+Example with 1024 parallel tasks:
+`srun -n 1024 --ntasks-per-node=16 --partition boost_usr_prod  --time=00:00:15 python mpi.py`
+
+>[!NOTE]
+>`lrd_all_serial` is nearer to login node than `boost_usr_prod` is, so it's bootstrap is faster.
+
+## How I was able to install `mpi4py` on Cineca's Leonardo HPC
 
 ```bash
 # Load mpi compiler
@@ -25,7 +37,7 @@ find ~/.local/lib -name "mpi4py"
 
 This install `mpi4py` in `~/.local` and not in venv. That's ok, but to be found, check that the path is in `python -m site`, otherwise run `export PYTHONPATH=$HOME/.local/lib/python3.11/site-packages:$PYTHONPATH` or write it at the bottom of `~/.bashrc` to make it permanent.
 
-## Test script
+### Test script
 
 ```python
 from mpi4py import MPI
