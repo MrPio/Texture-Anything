@@ -10,6 +10,9 @@ SHAPENET_PATH = ROOT_DIR / ".shapenet"
 
 
 class ShapeNetCoreDataset3D(Dataset3D):
+    def __init__(self):
+        super().__init__("shapenetcore")
+
     @cached_property
     def annotations(self) -> pd.DataFrame | None:
         return None

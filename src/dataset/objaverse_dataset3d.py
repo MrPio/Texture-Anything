@@ -12,6 +12,9 @@ objaverse._VERSIONED_PATH = str(OBJAVERSE_PATH)
 
 
 class ObjaverseDataset3D(Dataset3D):
+    def __init__(self):
+        super().__init__("objaverse")
+
     @cached_property
     def annotations(self) -> pd.DataFrame | None:
         return pd.read_parquet(ROOT_DIR / "data/2-annotations_filtered_by_thumbnails.parquet")

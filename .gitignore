@@ -1,5 +1,6 @@
 .venv/
 .objaverse/
+.huggingface/
 /**/.textures
 /**/logs
 /**/__pycache__/

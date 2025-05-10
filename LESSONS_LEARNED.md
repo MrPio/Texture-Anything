@@ -1,5 +1,16 @@
 # Lessons Learned
 
+## Work with multiple site-packages (one in venv, one global)
+
+Do `export PYTHONPATH=$HOME/.local/lib/python3.11/site-packages:$PYTHONPATH`.
+Furthermore, to enable VSCode IntelliSense, go to `settings.json` and add:
+
+```json
+    "python.analysis.extraPaths": [
+        "~/.local/lib/python3.11/site-packages"
+    ]
+```
+
 ## How I was able to achieve massive parallelism
 
 Set `--ntasks-per-node=16` and GRES amount.

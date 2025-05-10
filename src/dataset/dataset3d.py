@@ -1,8 +1,17 @@
 import abc
+from functools import cached_property
+import os
+from pathlib import Path
 import pandas as pd
+from tqdm import tqdm
+
+DATASET_PATH = Path(__file__).parent.parent.parent.resolve() / "data/dataset"
 
 
 class Dataset3D(abc.ABC):
+    def __init__(self, dataset_folder: str):
+        self.dataset_folder = dataset_folder
+
     @property
     @abc.abstractmethod
     def annotations(self) -> pd.DataFrame | None:
@@ -11,7 +20,7 @@ class Dataset3D(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def statistics(self) -> pd.DataFrame: 
+    def statistics(self) -> pd.DataFrame:
         """The statistics generated on the downloaded models. Columns are: `meshCount`, `uvCount`, `diffuseCount`"""
         ...
 
@@ -23,3 +32,12 @@ class Dataset3D(abc.ABC):
 
     def download(self) -> None:
         raise NotImplementedError()
+
+    @cached_property
+    def triplets(self) -> set[str]:
+        """Load the triplets dataset as intersection of uids in `caption`, `uv` and `diffuse` folders."""
+        path = DATASET_PATH / self.dataset_folder
+        captions = {x.stem for x in (path / "render").glob("*.jpg")}
+        uvs = {x.stem for x in (path / "uv").glob("*.png")}
+        diffuses = {x.stem for x in (path / "diffuse").glob("*.png")}
+        return captions.intersection(uvs, diffuses)
