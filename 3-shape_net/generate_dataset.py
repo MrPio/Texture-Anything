@@ -18,7 +18,7 @@ NUM_TASK = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", 1))
 
 statistics = pd.read_parquet(SCRIPT_DIR / "statistics.parquet")
 selected_uids = statistics[statistics["valid"]].index
-paths = load_shapenetcore_objects()
+dataset = load_shapenetcore_objects()
 for folder in ["render", "uv", "diffuse", "caption"]:
     os.makedirs(ROOT_DIR / f"data/dataset/shapnetcore/{folder}", exist_ok=True)
 

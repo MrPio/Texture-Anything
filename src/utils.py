@@ -1,7 +1,9 @@
 import math
 from PIL import Image
 import matplotlib.pyplot as plt
-
+import os
+import objaverse
+objaverse._VERSIONED_PATH=os.path.join('../.objaverse', "hf-objaverse-v1")
 
 def plot_images(images: list[Image.Image], size=4, cols: int = 1):
     """Plot a list of PIL images in a grid
