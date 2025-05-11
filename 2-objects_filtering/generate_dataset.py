@@ -8,8 +8,8 @@ import requests
 import objaverse
 from pathlib import Path
 
-ROOT_DIR = str(Path(__file__).parent.parent.resolve())
-sys.path.insert(0, ROOT_DIR)
+ROOT_PATH = str(Path(__file__).parent.parent.resolve())
+sys.path.insert(0, ROOT_PATH)
 from src import *
 import argparse
 
@@ -31,17 +31,17 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-annotations = pd.read_parquet(Path(ROOT_DIR, "data/2-annotations_filtered_by_thumbnails.parquet"))
-statistics = pd.read_parquet(Path(ROOT_DIR, "2-objects_filtering/statistics.parquet"))
+annotations = pd.read_parquet(Path(ROOT_PATH, "data/2-annotations_filtered_by_thumbnails.parquet"))
+statistics = pd.read_parquet(Path(ROOT_PATH, "2-objects_filtering/statistics.parquet"))
 selected_uids = statistics[statistics["diffuseCount"] == 1].index
-objaverse._VERSIONED_PATH = Path(ROOT_DIR, ".objaverse/hf-objaverse-v1")
+objaverse._VERSIONED_PATH = Path(ROOT_PATH, ".objaverse/hf-objaverse-v1")
 paths = objaverse.load_objects(annotations.index[:DOWNLOADED_OBJECTS].to_list(), download_processes=256)
 for folder in ["render", "uv", "diffuse", "caption"]:
-    os.makedirs(Path(ROOT_DIR, f"data/dataset/objaverse/{folder}"), exist_ok=True)
+    os.makedirs(Path(ROOT_PATH, f"data/dataset/objaverse/{folder}"), exist_ok=True)
 
 already_processed_uids = [
     os.path.splitext(x)[0]
-    for x in os.listdir(Path(ROOT_DIR, f"data/dataset/objaverse/{'uv' if args.computation_node else 'render'}"))
+    for x in os.listdir(Path(ROOT_PATH, f"data/dataset/objaverse/{'uv' if args.computation_node else 'render'}"))
 ]
 print(f"Already processed {len(already_processed_uids)} objects")
 
@@ -68,8 +68,8 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
             continue
 
         # Commit
-        diffuse.save(Path(ROOT_DIR, f"data/dataset/objaverse/diffuse/{uid}.png"))
-        uv_map.save(Path(ROOT_DIR, f"data/dataset/objaverse/uv/{uid}.png"))
+        diffuse.save(Path(ROOT_PATH, f"data/dataset/objaverse/diffuse/{uid}.png"))
+        uv_map.save(Path(ROOT_PATH, f"data/dataset/objaverse/uv/{uid}.png"))
     else:
         # Download thumbnail (not possible in computation nodes)
         thumbnail = requests.get(annotations.loc[uid]["thumbnail"]).content
@@ -77,5 +77,5 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
         # Skip if the render resolution is less than 0.2MP
         if render.size[0] * render.size[1] < MIN_RENDER_RES:
             continue
-        with open(Path(ROOT_DIR, f"data/dataset/objaverse/render/{uid}.jpg"), "wb") as f:
+        with open(Path(ROOT_PATH, f"data/dataset/objaverse/render/{uid}.jpg"), "wb") as f:
             f.write(thumbnail)

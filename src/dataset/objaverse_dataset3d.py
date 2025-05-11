@@ -6,8 +6,8 @@ from tqdm import tqdm
 from .dataset3d import Dataset3D
 import objaverse
 
-ROOT_DIR = Path(__file__).parent.parent.parent.resolve()
-OBJAVERSE_PATH = ROOT_DIR / ".objaverse/hf-objaverse-v1"
+ROOT_PATH = Path(__file__).parent.parent.parent.resolve()
+OBJAVERSE_PATH = ROOT_PATH / ".objaverse/hf-objaverse-v1"
 objaverse._VERSIONED_PATH = str(OBJAVERSE_PATH)
 
 
@@ -17,11 +17,11 @@ class ObjaverseDataset3D(Dataset3D):
 
     @cached_property
     def annotations(self) -> pd.DataFrame | None:
-        return pd.read_parquet(ROOT_DIR / "data/2-annotations_filtered_by_thumbnails.parquet")
+        return pd.read_parquet(ROOT_PATH / "data/2-annotations_filtered_by_thumbnails.parquet")
 
     @cached_property
     def statistics(self) -> pd.DataFrame:
-        df = pd.read_parquet(ROOT_DIR / "2-objects_filtering/statistics.parquet")
+        df = pd.read_parquet(ROOT_PATH / "2-objects_filtering/statistics.parquet")
         df["valid"] = df["diffuseCount"] == 1
         return df
 

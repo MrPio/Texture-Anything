@@ -24,7 +24,7 @@ Example with 1024 parallel tasks:
 ## How I was able to install `mpi4py` on Cineca's Leonardo HPC
 
 ```bash
-# Load mpi compiler
+# Load mpi compiler (each session)
 module load intel-oneapi-mpi/2021.10.0
 # if the module is not to be found, run
 module load profile/deeplrn cineca-ai

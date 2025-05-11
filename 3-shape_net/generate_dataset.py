@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
-ROOT_DIR = SCRIPT_DIR.parent
+ROOT_PATH = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR.parent))
 from src import *
 
@@ -20,16 +20,16 @@ statistics = pd.read_parquet(SCRIPT_DIR / "statistics.parquet")
 selected_uids = statistics[statistics["valid"]].index
 dataset = load_shapenetcore_objects()
 for folder in ["render", "uv", "diffuse", "caption"]:
-    os.makedirs(ROOT_DIR / f"data/dataset/shapnetcore/{folder}", exist_ok=True)
+    os.makedirs(ROOT_PATH / f"data/dataset/shapenetcore/{folder}", exist_ok=True)
 
-already_downloaded_uids = [os.path.splitext(x)[0] for x in os.listdir(Path(ROOT_DIR, f"data/dataset/shapnetcore/uv"))]
+already_downloaded_uids = [os.path.splitext(x)[0] for x in os.listdir(Path(ROOT_PATH, f"data/dataset/shapenetcore/uv"))]
 
 
 for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
     if uid in already_downloaded_uids:
         continue
     
-    obj = ShapNetCoreObject3D(uid, paths[uid])
+    obj = ShapeNetCoreObject3D(uid, paths[uid])
 
     # Extract diffuse texture
     diffuse = obj.textures
@@ -48,5 +48,5 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
         continue
 
     # Commit
-    diffuse[0].save(ROOT_DIR / f"data/dataset/shapnetcore/diffuse/{uid}.png")
-    uv_map.save(ROOT_DIR / f"data/dataset/shapnetcore/uv/{uid}.png")
+    diffuse[0].save(ROOT_PATH / f"data/dataset/shapenetcore/diffuse/{uid}.png")
+    uv_map.save(ROOT_PATH / f"data/dataset/shapenetcore/uv/{uid}.png")

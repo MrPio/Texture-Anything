@@ -38,7 +38,7 @@ for uid, path in tqdm(list(paths.items())[TASK_ID::NUM_TASK]):
     obj_path = Path(path) / "models" / "model_normalized.obj"
     if not obj_path.exists():
         continue
-    obj = ShapNetCoreObject3D(uid, obj_path)
+    obj = ShapeNetCoreObject3D(uid, obj_path)
     if obj.has_one_mesh:
         mesh_stats = obj.mesh_stats
 

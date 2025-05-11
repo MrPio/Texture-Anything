@@ -5,8 +5,8 @@ import pandas as pd
 from tqdm import tqdm
 from .dataset3d import Dataset3D
 
-ROOT_DIR = Path(__file__).parent.parent.parent.resolve()
-SHAPENET_PATH = ROOT_DIR / ".shapenet"
+ROOT_PATH = Path(__file__).parent.parent.parent.resolve()
+SHAPENET_PATH = ROOT_PATH / ".shapenet"
 
 
 class ShapeNetCoreDataset3D(Dataset3D):
@@ -19,7 +19,7 @@ class ShapeNetCoreDataset3D(Dataset3D):
 
     @cached_property
     def statistics(self) -> pd.DataFrame:
-        return pd.read_parquet(ROOT_DIR / "3-shape_net/statistics.parquet")
+        return pd.read_parquet(ROOT_PATH / "3-shape_net/statistics.parquet")
 
     @cached_property
     def paths(self) -> dict[str, str]:

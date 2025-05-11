@@ -6,7 +6,7 @@ import os
 import sys
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
-ROOT_DIR = SCRIPT_DIR.parent
+ROOT_PATH = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR.parent))
 from src import *
 import warnings
@@ -21,8 +21,8 @@ DOWNLOADED_OBJECTS = 45_000
 TASK_ID = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
 NUM_TASK = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", 1))
 
-objaverse._VERSIONED_PATH = os.path.join(ROOT_DIR / ".objaverse/hf-objaverse-v1")
-annotations = pd.read_parquet(ROOT_DIR / "data/2-annotations_filtered_by_thumbnails.parquet")
+objaverse._VERSIONED_PATH = os.path.join(ROOT_PATH / ".objaverse/hf-objaverse-v1")
+annotations = pd.read_parquet(ROOT_PATH / "data/2-annotations_filtered_by_thumbnails.parquet")
 paths = objaverse.load_objects(annotations.index[:DOWNLOADED_OBJECTS].to_list())
 
 statistics_path = Path(SCRIPT_DIR, f"statistics{TASK_ID if NUM_TASK>1 else ''}.parquet")

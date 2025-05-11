@@ -12,5 +12,10 @@
 
 data/0-annotations.pkl
 data/1-annotations_filtered.parquet
-data/dataset/**
+data/dataset/objaverse/diffuse/*
+data/dataset/objaverse/uv/*
+data/dataset/objaverse/render/*
+data/dataset/shapenetcore/diffuse/**
+data/dataset/shapenetcore/uv/*
+data/dataset/shapenetcore/render/*
 .shapenet/
