@@ -9,6 +9,12 @@ from PIL import Image, ImageDraw
 
 
 class Object3D(abc.ABC):
+    """Represents a 3d object. 
+
+    Args:
+        uid: the uid provided by the dataset the model is coming from
+        path: the absolute path of the file
+    """
     def __init__(self, uid: str, path: str | Path):
         self.uid = uid
         self.path = Path(path) if path is str else path

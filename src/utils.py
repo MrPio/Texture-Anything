@@ -21,12 +21,12 @@ def plot_images(images: list[Image.Image], size=4, cols: int = 1):
         axes = [axes]
     for i, img in enumerate(images):
         axes[i].imshow(img)
-        axes[i].set_title(f"({img.size[0]}×{img.size[0]})")
+        axes[i].set_title(f"({img.size[0]}×{img.size[1]})")
         axes[i].axis("off")
     plt.show()
 
 
-def compute_opacity(img: Image.Image, threshold=0) -> float:
+def compute_image_density(img: Image.Image, threshold=0) -> float:
     """Get the fraction of non-transparent pixels of an image. Can be used to determine how dense a UV map is."""
     # Ensure image is in RGBA mode
     img = img.convert("RGBA")

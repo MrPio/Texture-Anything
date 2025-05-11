@@ -9,6 +9,8 @@ DATASET_PATH = Path(__file__).parent.parent.parent.resolve() / "data/dataset"
 
 
 class Dataset3D(abc.ABC):
+    """Represents a dataset of 3D objects."""
+
     def __init__(self, dataset_folder: str):
         self.dataset_folder = dataset_folder
 

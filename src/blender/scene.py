@@ -2,7 +2,7 @@ import bpy
 import PIL
 
 
-__scene_resetted = 0
+__scene_resetted_times = 0
 
 
 def __reset_scene():
@@ -47,9 +47,9 @@ def __reset_scene():
     # bpy.ops.outliner.orphans_purge(
     #     do_local_ids=True, do_linked_ids=True, do_recursive=True)
 
-    global __scene_resetted
-    __scene_resetted += 1
-    if __scene_resetted % 100 == 0:
+    global __scene_resetted_times
+    __scene_resetted_times += 1
+    if __scene_resetted_times % 100 == 0:
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
 

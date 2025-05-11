@@ -64,7 +64,7 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
         uv_map = obj.draw_uv_map()
 
         # Skip if UV is too sparse
-        if compute_opacity(uv_map) < MIN_UV_DENSITY:
+        if compute_image_density(uv_map) < MIN_UV_DENSITY:
             continue
 
         # Commit
