@@ -3,6 +3,7 @@
     - [ ] The loss should not care about part of the texture not mapped?
     - [ ] Generate captions from renders
     - [ ] Generate the rendering of objects
+    - [ ] _Data Augmentation_:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture
 
 # DONE
 

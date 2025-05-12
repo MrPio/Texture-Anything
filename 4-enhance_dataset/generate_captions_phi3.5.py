@@ -4,7 +4,7 @@ Distributed 3D Render Captioning Script using Phi 3.5 Vision Instruct and MPI.
 
 Usage:
     srun -n 32 --ntasks-per-node=4 --mem=32G --gpus-per-task=1 python generate_captions_phi3.5.py
-    (Takes ~1.92s/it on A100)
+    (Takes ~2s/it on A100)
 
 Arguments:
     --input   (str):  Path to directory containing input images.
@@ -90,7 +90,7 @@ for p in tqdm(paths) if rank == 0 else paths:
 
 # Syncronize the partial results to the root task
 all_captions = comm.gather(captions, root=0)
-if rank == 0 and not args.demo:
+if rank == 0:
     all_captions = {k: v for d in all_captions for k, v in d.items()}
     with open(ROOT_PATH / args.output, "w") as f:
         json.dump(all_captions, f, indent=4)
