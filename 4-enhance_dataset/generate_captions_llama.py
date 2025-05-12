@@ -1,22 +1,23 @@
+"""
+⚠️ I am waiting for Meta to grant me access to the checkpoints. As for right now, I ended up using Microsoft's Phi 3.5.
+"""
+
 from pathlib import Path
 from transformers import AutoProcessor, Llama4ForConditionalGeneration
 import torch
 from huggingface_hub import login
 import os
+
 ROOT_PATH = Path(__file__).parent.parent.resolve()
 CACHE_PATH = ROOT_PATH / ".huggingface"
 
 model_id = "meta-llama/Llama-4-Scout-17B-16E-Instruct"
 
-if 'HF_TOKEN' in os.environ:
-    login(os.environ['HF_TOKEN'])
+if "HF_TOKEN" in os.environ:
+    login(os.environ["HF_TOKEN"])
 processor = AutoProcessor.from_pretrained(model_id)
 model = Llama4ForConditionalGeneration.from_pretrained(
-    model_id,
-    attn_implementation="flex_attention",
-    device_map="auto",
-    torch_dtype=torch.bfloat16,
-    cache_dir=CACHE_PATH
+    model_id, attn_implementation="flex_attention", device_map="auto", torch_dtype=torch.bfloat16, cache_dir=CACHE_PATH
 )
 
 url1 = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/0052a70beed5bf71b92610a43a52df6d286cd5f3/diffusers/rabbit.jpg"
@@ -28,7 +29,7 @@ messages = [
             {"type": "image", "url": url1},
             {"type": "image", "url": url2},
             {"type": "text", "text": "Can you describe how these two images are similar, and how they differ?"},
-        ]
+        ],
     },
 ]
 
@@ -45,7 +46,6 @@ outputs = model.generate(
     max_new_tokens=256,
 )
 
-response = processor.batch_decode(
-    outputs[:, inputs["input_ids"].shape[-1]:])[0]
+response = processor.batch_decode(outputs[:, inputs["input_ids"].shape[-1] :])[0]
 print(response)
 print(outputs[0])

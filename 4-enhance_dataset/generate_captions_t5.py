@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 """
+⚠️ This model generates short and poor captions. As for right now, I ended up using Microsoft's Phi 3.5.
 Distributed 3D Render Captioning Script using BLIP-2 and MPI.
-⚠️ At the current state, running this script overwrites any captions.json file in the specified output path
 
 Usage:
-    srun -n 32 --ntasks-per-node=4 --mem=32G --gpus-per-task=1 python generate_captions.py
-    (Took ~5min on 32 A100)
+    srun -n 32 --ntasks-per-node=4 --mem=32G --gpus-per-task=1 python generate_captions_t5.py
+    (Takes ~1.0s/it on A100)
 
 Arguments:
-    --input   (str):  Path to directory containing input JPEG images.
+    --input   (str):  Path to directory containing input images.
     --output  (str):  Path to save the generated captions JSON.
     --demo         :  Optional flag to run in demo mode (processes only a few images).
 
@@ -38,7 +38,7 @@ rank, size = comm.Get_rank(), comm.Get_size()
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=str, default="data/dataset/objaverse/render/")
-    parser.add_argument("--output", type=str, default="data/dataset/objaverse/caption/")
+    parser.add_argument("--output", type=str, default="data/dataset/objaverse/caption/captions_t5.json")
     parser.add_argument("--demo", action="store_true")
     return parser.parse_args()
 
@@ -111,5 +111,5 @@ for p in tqdm(paths) if rank == 0 else paths:
 all_captions = comm.gather(captions, root=0)
 if rank == 0 and not args.demo:
     all_captions = {k: v for d in all_captions for k, v in d.items()}
-    with open(ROOT_PATH / args.output / "captions.json", "w") as f:
+    with open(ROOT_PATH / args.output, "w") as f:
         json.dump(all_captions, f, indent=4)
