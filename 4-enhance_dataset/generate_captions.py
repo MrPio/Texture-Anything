@@ -44,9 +44,9 @@ def parse_args():
 
 
 args = parse_args()
-paths = list((ROOT_PATH / args.input).glob("*.jpg"))[rank::size]
+paths = sorted(p for p in (ROOT_PATH / args.input).glob("*") if p.suffix in {".jpg", ".png"})[rank::size]
 if args.demo:
-    paths = paths[:6]
+    paths = paths[:9]
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 processor = Blip2Processor.from_pretrained(
@@ -62,21 +62,30 @@ model.eval()
 
 captions = {}
 instruction = (
-    "Describe the object in this 3D render in rich detail.  "
-    "Describe how it is made and all of its properties.  "
-    "Focus on the object itself and not on the background.  "
-    "First identify its overall shape and proportions.  "
-    "Then discuss the materials and the textures.  "
-    "Finally, mention any color nuances or surface details you notice."
+    (
+        "Describe the object in this 3D render in rich detail.  "
+        "Describe how it is made and all of its properties.  "
+        "Focus on the object itself and not on the background.  "
+        "First identify its overall shape and proportions.  "
+        "Then discuss the materials and the textures.  "
+        "Finally, mention any color nuances or surface details you notice."
+    )
+    if "/render" in args.input
+    else (
+        "In at least one full sentence, richly describe this texture—"
+        "its materials, colors, patterns, and any subtle nuances."
+    )
 )
 gen_kwargs = {
-    # "max_new_tokens": 128,
-    "num_beams": 5,
-    "length_penalty": 1,
+    "max_new_tokens": 64,
+    # "min_length": 16,
+    "num_beams": 6,
+    "length_penalty": 0.8,
     "early_stopping": True,
-    # "do_sample": True,
-    # "top_p": 0.9,
-    # "temperature": 1.0,
+    "repetition_penalty": 1.2,
+    "do_sample": True,
+    "top_p": 0.9,
+    "temperature": 1.0,
 }
 
 for p in tqdm(paths) if rank == 0 else paths:
