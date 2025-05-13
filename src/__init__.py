@@ -20,3 +20,7 @@ logging.disable(logging.CRITICAL)
 
 import objaverse
 objaverse._VERSIONED_PATH = str(OBJAVERSE_PATH)
+
+
+import seaborn as sns
+sns.set(style="darkgrid", context="notebook", font_scale=1.15)
