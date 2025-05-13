@@ -1,11 +1,14 @@
-# TODO
+# KANBAN
+
+## TODO
 
     - [ ] The loss should not care about part of the texture not mapped?
     - [ ] Generate captions from renders
     - [ ] Generate the rendering of objects
     - [ ] _Data Augmentation_:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture
+    - [ ] Define a UV map scoring function
 
-# DONE
+## DONE
 
     - [x] Objects statistics have been increased to 45_000. Launch generate_dataset.py.
     - [x] Try shapenetcore, now they've granted me access
