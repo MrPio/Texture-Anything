@@ -1,9 +1,6 @@
 from functools import cached_property
-import os
 from pathlib import Path
-from cachetools import cached
 import pandas as pd
-from tqdm import tqdm
 from .dataset3d import Dataset3D
 from ..blender.object3d.objaverse_object3d import ObjaverseObject3D
 import objaverse
