@@ -3,7 +3,7 @@ from functools import cached_property
 import os
 from pathlib import Path
 import pandas as pd
-from tqdm import tqdm
+from ..blender.object3d.object3d import Object3D
 
 DATASET_PATH = Path(__file__).parent.parent.parent.resolve() / "data/dataset"
 
@@ -32,9 +32,6 @@ class Dataset3D(abc.ABC):
         """A `dict` with UID as key and object path as value"""
         ...
 
-    def download(self) -> None:
-        raise NotImplementedError()
-
     @cached_property
     def triplets(self) -> set[str]:
         """Load the triplets dataset as intersection of uids in `caption`, `uv` and `diffuse` folders."""
@@ -43,3 +40,9 @@ class Dataset3D(abc.ABC):
         uvs = {x.stem for x in (path / "uv").glob("*.png")}
         diffuses = {x.stem for x in (path / "diffuse").glob("*.png")}
         return captions.intersection(uvs, diffuses)
+
+    @abc.abstractmethod
+    def __getitem__(self, key) -> Object3D: ...
+
+    def download(self) -> None:
+        raise NotImplementedError()

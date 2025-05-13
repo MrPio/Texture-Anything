@@ -1,5 +1,8 @@
+from functools import cached_property
 from pathlib import Path
-from .object3d import Object3D
+
+import PIL
+from .object3d import DATASET_PATH, Object3D
 from PIL import Image
 import os
 
@@ -24,3 +27,8 @@ class ShapeNetCoreObject3D(Object3D):
             return []
         files = os.listdir(self.path.parent.parent / "screenshots")
         return [Image.open(self.path.parent.parent / "screenshots" / x) for x in files]
+
+    @cached_property
+    def render(self) -> PIL.Image.Image | None:
+        path = DATASET_PATH / "shapenetcore/render" / f"{self.uid}.jpg"
+        return PIL.Image.open(path) if path.exists() else None

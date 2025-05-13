@@ -19,7 +19,7 @@ Example with 1024 parallel tasks:
 `srun -n 1024 --ntasks-per-node=16 --partition boost_usr_prod  --time=00:00:15 python mpi.py`
 
 >[!NOTE]
->`lrd_all_serial` is nearer to login node than `boost_usr_prod` is, so it's bootstrap is faster.
+>`lrd_all_serial` is nearer to login node than `boost_usr_prod` is, so its bootstrap is faster.
 
 ## How I was able to install `mpi4py` on Cineca's Leonardo HPC
 

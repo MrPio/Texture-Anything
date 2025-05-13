@@ -6,15 +6,21 @@ from ...utils import plot_images
 import bmesh
 import bpy
 from PIL import Image, ImageDraw
+import bmesh
+import math
+import numpy as np
+
+DATASET_PATH = Path(__file__).resolve().parent.parent.parent.parent / "data/dataset"
 
 
 class Object3D(abc.ABC):
-    """Represents a 3d object. 
+    """Represents a 3d object. Methods are meant to be called on objects containing 1 mesh, 1 UV and 1 diffuse texture.
 
     Args:
         uid: the uid provided by the dataset the model is coming from
         path: the absolute path of the file
     """
+
     def __init__(self, uid: str, path: str | Path):
         self.uid = uid
         self.path = Path(path) if path is str else path
@@ -54,6 +60,10 @@ class Object3D(abc.ABC):
     @property
     @abc.abstractmethod
     def textures(self) -> list[Image.Image]: ...
+
+    @property
+    @abc.abstractmethod
+    def render(self) -> list[Image.Image]: ...
 
     def plot_diffuse(self):
         images_pil = self.textures
@@ -137,3 +147,110 @@ class Object3D(abc.ABC):
         pixels = pixels.reshape((*image.size, 4))
         image_pil = Image.fromarray(pixels, "RGBA")
         return image_pil, self.draw_uv_map()
+
+    @property
+    def uv_score(self, weights=(0.3, 0.25, 0.25, 0.2)):
+        weights = (0.3, 0.25, 0.25, 0.2)
+        assert self.has_one_mesh
+        """
+        Scores the UV layout of a Blender mesh object for readability and cleanliness.
+
+        Args:
+            weights (tuple): Weights for (continuity, distortion, packing, fragmentation).
+
+        Returns:
+            float: The combined score S between 0 and 1.
+            dict: Individual component scores {"C", "D", "P", "F"}.
+        """
+
+        mesh = self.mesh.data
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+
+        # Select UV layer
+        uv_layer = bm.loops.layers.uv.active
+        if uv_layer is None:
+            raise ValueError("No UV layer found")
+
+        # 1. Continuity: count cut edges (edges whose two adjacent faces map to different islands)
+        total_edges = len(bm.edges)
+        # Identify UV islands via flood fill
+        island_idxs = {}
+        current_island = 0
+        tagged = {}
+
+        def flood_fill(face, idx):
+            stack = [face]
+            while stack:
+                f = stack.pop()
+                for loop in f.loops:
+                    tagged[loop[uv_layer]] = True
+                island_idxs[f.index] = idx
+                for edge in f.edges:
+                    linked = [
+                        lf.face for lf in edge.link_loops if loop[uv_layer] not in tagged or not tagged[loop[uv_layer]]
+                    ]
+                    for lf_face in linked:
+                        if lf_face.index not in island_idxs:
+                            stack.append(lf_face)
+
+        for face in bm.faces:
+            if face.index not in island_idxs:
+                # clear tags
+                # for l in bm.loops:
+                #     l[uv_layer].tag = False
+                flood_fill(face, current_island)
+                current_island += 1
+
+        # Now count cut edges: edges whose adjacent faces belong to different islands
+        cut_edges = 0
+        for edge in bm.edges:
+            faces = edge.link_faces
+            if len(faces) == 2:
+                if island_idxs[faces[0].index] != island_idxs[faces[1].index]:
+                    cut_edges += 1
+        C = 1.0 - (cut_edges / total_edges) if total_edges > 0 else 0.0
+
+        # 2. Distortion: compare UV area vs 3D area per face
+        stretches = []
+        for face in bm.faces:
+            # 3D area from bmesh
+            area3d = face.calc_area()
+            # UV area: project poly onto UV plane
+            uv_coords = [loop[uv_layer].uv for loop in face.loops]
+            area_uv = 0.0
+            for i in range(len(uv_coords)):
+                x1, y1 = uv_coords[i]
+                x2, y2 = uv_coords[(i + 1) % len(uv_coords)]
+                area_uv += x1 * y2 - x2 * y1
+            area_uv = abs(area_uv) * 0.5
+            stretches.append(area_uv / area3d if area3d > 0 else 0.0)
+        sigma_s = float(np.std(stretches))
+        D = 1.0 - (1.0 / (1.0 + sigma_s))
+
+        # 3. Packing efficiency
+        total_uv_area = sum((stretch * face.calc_area()) for stretch, face in zip(stretches, bm.faces))
+        canvas_area = 1.0  # UV space is normalized to [0,1]
+        P = total_uv_area / canvas_area
+
+        # 4. Fragmentation: entropy of island area distribution
+        island_areas = {}
+        # accumulate UV area per island
+        for face, stretch in zip(bm.faces, stretches):
+            idx = island_idxs[face.index]
+            island_areas[idx] = island_areas.get(idx, 0.0) + (stretch * face.calc_area())
+        total_area = sum(island_areas.values())
+        probs = [a / total_area for a in island_areas.values() if total_area > 0]
+        H = -sum(p * math.log(max(1e-3, p)) for p in probs) if probs else 0.0
+        F = 1.0 - (H / math.log(len(probs))) if len(probs) > 1 else 1.0
+
+        # Combine scores
+        wC, wD, wP, wF = weights
+        S = (wC * C) + (wD * D) + (wP * P) + (wF * F)
+
+        # Clean up bmesh
+        bm.free()
+
+        return S, {"C": C, "D": D, "P": P, "F": F}

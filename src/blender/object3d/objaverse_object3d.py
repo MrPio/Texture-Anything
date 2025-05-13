@@ -1,12 +1,20 @@
+from functools import cached_property
 from pathlib import Path
-from .object3d import Object3D
+
+import requests
+
+import PIL
+from .object3d import DATASET_PATH, Object3D
 import numpy as np
 from PIL import Image
 
 
 class ObjaverseObject3D(Object3D):
     def __init__(self, uid: str, path: str | Path):
+        from src.dataset.objaverse_dataset3d import ObjaverseDataset3D
+
         super(ObjaverseObject3D, self).__init__(uid, path)
+        self.dataset = ObjaverseDataset3D()
 
     @property
     def textures(self) -> list[Image.Image]:
@@ -25,3 +33,10 @@ class ObjaverseObject3D(Object3D):
                 images_pil.append(image_pil)
 
         return images_pil
+
+    @cached_property
+    def render(self) -> PIL.Image.Image | None:
+        path = DATASET_PATH / "objaverse/render" / f"{self.uid}.jpg"
+        return PIL.Image.open(
+            path if path.exists() else requests.get(self.dataset.annotations.loc[self.uid]["thumbnail"],stream=True).raw
+        )

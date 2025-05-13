@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 from .dataset3d import Dataset3D
+from ..blender.object3d.shapenetcore_object3d import ShapeNetCoreObject3D
 
 ROOT_PATH = Path(__file__).parent.parent.parent.resolve()
 SHAPENET_PATH = ROOT_PATH / ".shapenet"
@@ -30,3 +31,6 @@ class ShapeNetCoreDataset3D(Dataset3D):
                 for model in os.listdir(path):
                     models[model] = str(SHAPENET_PATH / offset / model)
         return models
+
+    def __getitem__(self, key) -> ShapeNetCoreObject3D:
+        return ShapeNetCoreObject3D(key, self.paths[key])
