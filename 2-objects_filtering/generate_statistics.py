@@ -1,3 +1,11 @@
+"""
+Generate statistics on OBJ files.
+Please make sure that you have downloaded the first `DOWNLOADED_OBJECTS` of the annotations table before running this script.
+This script is CWD-independent.
+
+This script is meant to be used with "--array" SLURM flag and require post manual merging of the output parquet files. A wiser implementation should use MIP.
+"""
+
 from pathlib import Path
 import objaverse
 import pandas as pd
@@ -10,12 +18,9 @@ ROOT_PATH = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR.parent))
 from src import *
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
 
-"""Generate statistics on OBJ files. 
-Please make sure that you have downloaded the first `DOWNLOADED_OBJECTS` of the annotations table before running this script.
-This script is CWD-independent
-"""
+warnings.simplefilter(action="ignore", category=FutureWarning)
+
 
 DOWNLOADED_OBJECTS = 45_000
 TASK_ID = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))

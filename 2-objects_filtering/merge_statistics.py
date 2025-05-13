@@ -1,3 +1,7 @@
+"""
+This is a utility script meant to be run after `generate_statistics.py`
+"""
+
 from pathlib import Path
 import pandas as pd
 import os

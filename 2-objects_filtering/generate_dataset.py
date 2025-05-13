@@ -1,3 +1,9 @@
+"""
+Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse texture.
+On a single compute node, takes 50m for 6_000 objects.
+This script is CWD-independent
+"""
+
 from io import BytesIO
 import pandas as pd
 from tqdm import tqdm
@@ -13,9 +19,6 @@ sys.path.insert(0, ROOT_PATH)
 from src import *
 import argparse
 
-"""Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse texture. 
-On a single compute node, takes 50m for 6_000 objects.
-This script is CWD-independent"""
 
 DOWNLOADED_OBJECTS = 45_000
 MIN_UV_DENSITY = 0.01
