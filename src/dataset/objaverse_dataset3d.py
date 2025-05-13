@@ -26,7 +26,7 @@ class ObjaverseDataset3D(Dataset3D):
 
     @cached_property
     def paths(self) -> dict[str, str]:
-        num_objs = sum(1 for _ in OBJAVERSE_PATH.rglob("*.glb")) - 50
+        num_objs = sum(1 for _ in OBJAVERSE_PATH.rglob("*.glb")) - 10
         return objaverse.load_objects(self.annotations.index[:num_objs])
 
     def __getitem__(self, key) -> ObjaverseObject3D:
