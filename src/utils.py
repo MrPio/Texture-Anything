@@ -1,10 +1,6 @@
 import math
 from PIL import Image
 import matplotlib.pyplot as plt
-import os
-import objaverse
-
-objaverse._VERSIONED_PATH = os.path.join("../.objaverse", "hf-objaverse-v1")
 
 
 def plot_images(images: list[Image.Image], size=4, cols: int = 1):
@@ -37,3 +33,6 @@ def compute_image_density(img: Image.Image, threshold=0) -> float:
     non_transparent = sum(1 for px in pixels if px[3] > threshold)
 
     return non_transparent / len(pixels)
+
+def clog(*values:str):
+    logging.log

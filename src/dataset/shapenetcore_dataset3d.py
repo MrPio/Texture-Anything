@@ -19,8 +19,11 @@ class ShapeNetCoreDataset3D(Dataset3D):
         return None
 
     @cached_property
-    def statistics(self) -> pd.DataFrame:
-        return pd.read_parquet(ROOT_PATH / "3-shape_net/statistics.parquet")
+    def statistics(self) -> pd.DataFrame | None:
+        path = ROOT_PATH / "3-shape_net/statistics.parquet"
+        if path.exists():
+            return pd.read_parquet(path)
+        return None
 
     @cached_property
     def paths(self) -> dict[str, str]:

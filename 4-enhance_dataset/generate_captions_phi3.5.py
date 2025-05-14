@@ -3,7 +3,7 @@
 Distributed 3D Render Captioning Script using Phi 3.5 Vision Instruct and MPI.
 
 Usage:
-    srun -n 32 --ntasks-per-node=4 --mem=32G --gpus-per-task=1 python generate_captions_phi3.5.py
+    $ srun -n 32 --ntasks-per-node=4 --mem=32G --gpus-per-task=1 --partition=boost_usr_prod python generate_captions_phi3.5.py
     (Takes ~2s/it on A100)
 
 Arguments:
@@ -28,24 +28,38 @@ from PIL import Image
 from transformers import AutoModelForCausalLM
 from transformers import AutoProcessor
 from mpi4py import MPI
+import sys
 
-
-ROOT_PATH = Path(__file__).parent.parent.resolve()
-CACHE_PATH = ROOT_PATH / ".huggingface"
-
-comm = MPI.COMM_WORLD
-rank, size = comm.Get_rank(), comm.Get_size()
+ROOT_PATH = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_PATH))
+from src import *
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=str, default="data/dataset/objaverse/render/")
     parser.add_argument("--output", type=str, default="data/dataset/objaverse/caption/captions_phi35.json")
+    parser.add_argument("-d", "--demo", action="store_true")
     return parser.parse_args()
 
 
 args = parse_args()
-paths = sorted(p for p in (ROOT_PATH / args.input).glob("*") if p.suffix in {".jpg", ".png"})[rank::size]
+
+CACHE_PATH = ROOT_PATH / ".huggingface"
+OUTPUT_PATH = ROOT_PATH / args.output
+
+comm = MPI.COMM_WORLD
+rank, size = comm.Get_rank(), comm.Get_size()
+
+captions = json.load(open(OUTPUT_PATH)) if OUTPUT_PATH.exists() else {}
+paths = sorted(
+    p for p in (ROOT_PATH / args.input).glob("*") if p.suffix in {".jpg", ".png"} and p.stem not in captions
+)[rank::size]
+if args.demo:
+    paths = paths[:4]
+if rank == 0:
+    log("Loaded", f"blue:{len(captions):,}", "captions of", f"{len(paths):,}")
+    log("Each task has to generate", f"red:{len(paths) // size:,}", "captions")
 
 model_id = "microsoft/Phi-3.5-vision-instruct"
 model = AutoModelForCausalLM.from_pretrained(
@@ -63,8 +77,6 @@ processor = AutoProcessor.from_pretrained(
     num_crops=16,
     cache_dir=CACHE_PATH,
 )
-
-captions = {}
 placeholder = f"<|image_{1}|>\n"
 messages = [
     {
@@ -92,5 +104,7 @@ for p in tqdm(paths) if rank == 0 else paths:
 all_captions = comm.gather(captions, root=0)
 if rank == 0:
     all_captions = {k: v for d in all_captions for k, v in d.items()}
-    with open(ROOT_PATH / args.output, "w") as f:
+    with open(OUTPUT_PATH, "w") as f:
         json.dump(all_captions, f, indent=4)
+    if args.demo:
+        log("Now you have", f"blue:{len(captions):,}", "captions")

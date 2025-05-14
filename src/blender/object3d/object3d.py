@@ -1,4 +1,5 @@
 import abc
+from functools import cached_property
 from pathlib import Path
 import numpy as np
 from ..scene import load_model
@@ -46,7 +47,7 @@ class Object3D(abc.ABC):
                                     nodes.append(node)
         return nodes
 
-    @property
+    @cached_property
     def mesh_stats(self) -> dict:
         """Get the properties of a given mesh in the current scene.
         Properties are `uv_count`, `texture_count`"""

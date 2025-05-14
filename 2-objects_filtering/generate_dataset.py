@@ -2,31 +2,36 @@
 Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse texture.
 On a single compute node, takes 50m for 6_000 objects.
 This script is CWD-independent
+
+Usage:
+    $ srun -n 2 --ntasks-per-node=4 --mem=24G --gpus-per-task=0 --partition=boost_usr_prod --qos=boost_qos_dbg python generate_dataset.py --computation-node
+
+Author:
+    Valerio Morelli - 2025-05-08
 """
 
 from io import BytesIO
-import pandas as pd
+import multiprocessing
 from tqdm import tqdm
 import os
 import sys
 import PIL.Image as PILImage
 import requests
-import objaverse
 from pathlib import Path
 
-ROOT_PATH = str(Path(__file__).parent.parent.resolve())
-sys.path.insert(0, ROOT_PATH)
+ROOT_PATH = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_PATH))
 from src import *
+from mpi4py import MPI
 import argparse
 
 
-DOWNLOADED_OBJECTS = 45_000
-MIN_UV_DENSITY = 0.01
-MIN_RENDER_RES = 200_000
-TASK_ID = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
-NUM_TASK = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", 1))
+MIN_UV_DENSITY = 0.0085
+MIN_RENDER_MEGAPIXEL = 200_000
+comm = MPI.COMM_WORLD
+rank, size = comm.Get_rank(), comm.Get_size()
 
-parser = argparse.ArgumentParser(description="Download the dataset.")
+parser = argparse.ArgumentParser()
 parser.add_argument(
     "--computation-node",
     action="store_true",
@@ -34,11 +39,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-annotations = pd.read_parquet(Path(ROOT_PATH, "data/2-annotations_filtered_by_thumbnails.parquet"))
-statistics = pd.read_parquet(Path(ROOT_PATH, "2-objects_filtering/statistics.parquet"))
-selected_uids = statistics[statistics["diffuseCount"] == 1].index
-objaverse._VERSIONED_PATH = Path(ROOT_PATH, ".objaverse/hf-objaverse-v1")
-paths = objaverse.load_objects(annotations.index[:DOWNLOADED_OBJECTS].to_list(), download_processes=256)
+dataset = ObjaverseDataset3D()
 for folder in ["render", "uv", "diffuse", "caption"]:
     os.makedirs(Path(ROOT_PATH, f"data/dataset/objaverse/{folder}"), exist_ok=True)
 
@@ -48,22 +49,17 @@ already_processed_uids = [
 ]
 print(f"Already processed {len(already_processed_uids)} objects")
 
-
-for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
-    if uid in already_processed_uids:
-        continue
-
-    if args.computation_node:
-        obj = ObjaverseObject3D(uid, paths[uid])
-
-        # Extract diffuse texture
+uids = dataset.statistics[dataset.statistics["valid"]].index[rank::size]
+uids = [x for x in uids if x not in already_processed_uids]
+if args.computation_node:
+    for uid in tqdm(uids) if rank == 0 else uids:
+        obj = dataset[uid]
         diffuse = obj.textures[0]
 
         # Skip if texture is not square
         if diffuse.size[0] != diffuse.size[1]:
             continue
 
-        # Bake UV map
         uv_map = obj.draw_uv_map()
 
         # Skip if UV is too sparse
@@ -73,12 +69,21 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
         # Commit
         diffuse.save(Path(ROOT_PATH, f"data/dataset/objaverse/diffuse/{uid}.png"))
         uv_map.save(Path(ROOT_PATH, f"data/dataset/objaverse/uv/{uid}.png"))
-    else:
+else:
+
+    def download_thumbnail(uid):
         # Download thumbnail (not possible in computation nodes)
-        thumbnail = requests.get(annotations.loc[uid]["thumbnail"]).content
-        render = PILImage.open(BytesIO(thumbnail))
-        # Skip if the render resolution is less than 0.2MP
-        if render.size[0] * render.size[1] < MIN_RENDER_RES:
-            continue
-        with open(Path(ROOT_PATH, f"data/dataset/objaverse/render/{uid}.jpg"), "wb") as f:
-            f.write(thumbnail)
+        thumbnail = requests.get(dataset.annotations.loc[uid]["thumbnail"]).content
+        try:
+            img = PILImage.open(BytesIO(thumbnail))
+        except:
+            img = None
+        return uid, img
+
+    with multiprocessing.Pool(16) as pool:
+        results = pool.imap_unordered(download_thumbnail, uids)
+        for uid, img in tqdm(results, total=len(uids), desc="Downloading"):
+            # Skip if the render resolution is less than 0.2MP
+            if img is None or img.size[0] * img.size[1] < MIN_RENDER_MEGAPIXEL:
+                continue
+            img.save(Path(ROOT_PATH, f"data/dataset/objaverse/render/{uid}.jpg"))

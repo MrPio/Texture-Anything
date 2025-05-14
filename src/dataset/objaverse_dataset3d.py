@@ -7,7 +7,6 @@ import objaverse
 
 ROOT_PATH = Path(__file__).parent.parent.parent.resolve()
 OBJAVERSE_PATH = ROOT_PATH / ".objaverse/hf-objaverse-v1"
-objaverse._VERSIONED_PATH = str(OBJAVERSE_PATH)
 
 
 class ObjaverseDataset3D(Dataset3D):
@@ -19,14 +18,17 @@ class ObjaverseDataset3D(Dataset3D):
         return pd.read_parquet(ROOT_PATH / "data/2-annotations_filtered_by_thumbnails.parquet")
 
     @cached_property
-    def statistics(self) -> pd.DataFrame:
-        df = pd.read_parquet(ROOT_PATH / "2-objects_filtering/statistics.parquet")
-        df["valid"] = df["diffuseCount"] == 1
-        return df
+    def statistics(self) -> pd.DataFrame | None:
+        path = ROOT_PATH / "2-objects_filtering/statistics.parquet"
+        if path.exists():
+            df = pd.read_parquet(path)
+            df["valid"] = df["diffuseCount"] == 1
+            return df
+        return None
 
     @cached_property
     def paths(self) -> dict[str, str]:
-        num_objs = sum(1 for _ in OBJAVERSE_PATH.rglob("*.glb")) - 10
+        num_objs = sum(1 for _ in OBJAVERSE_PATH.rglob("*.glb"))
         return objaverse.load_objects(self.annotations.index[:num_objs])
 
     def __getitem__(self, key) -> ObjaverseObject3D:
