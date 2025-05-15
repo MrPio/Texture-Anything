@@ -1,6 +1,12 @@
 import abc
+import contextlib
 from functools import cached_property
+import io
+import os
 from pathlib import Path
+import tempfile
+
+from tqdm import tqdm
 import numpy as np
 from ..scene import load_model
 from ...utils import plot_images
@@ -14,7 +20,7 @@ from mathutils import Vector
 
 
 class Object3D(abc.ABC):
-    """Represents a 3d object. Methods are meant to be called on objects containing 1 mesh, 1 UV and 1 diffuse texture.
+    """Represents a 3d object. Methods are meant to be called on objects containing 1 mesh, 1 UV and 1 diffuse texture. Since the Blender scene is singleton, you should instantiate one Object3D at the time.
 
     Args:
         uid: the uid provided by the dataset the model is coming from
@@ -29,6 +35,7 @@ class Object3D(abc.ABC):
         self.meshes = [x for x in self.objects if x.type == "MESH"]
         self.has_one_mesh = len(self.meshes) == 1
         self.mesh = self.meshes[0]
+        self.has_rendered = False
 
     @property
     def _mesh_nodes(self):
@@ -63,7 +70,69 @@ class Object3D(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def render(self) -> list[Image.Image]: ...
+    def rendering(self) -> list[Image.Image]: ...
+
+    @property
+    def uv_score(self) -> float | None:
+        """
+        Estimate how well the active UV map of a mesh object preserves 3D face areas.
+
+        Returns a float in [0,1], where 1 means exact area‐preservation (UV areas
+        perfectly proportional to 3D areas), and 0 means no correlation.
+
+        Method:
+        1. For each polygon, get its 3D area (mesh.polygons[].area) and UV area
+            (via 2D shoelace on its UV coordinates).
+        2. Build two distributions: A3d_i / sum(A3d) and Auv_i / sum(Auv).
+        3. The L1 distance between these two distributions is in [0,2]. We map
+            that to [1,0] by doing similarity = 1 - (L1 / 2).
+
+        Requirements:
+        - The mesh must have exactly one UV map (active).
+        - Faces may be n-gons; their UV area is computed in 2D by shoelace.
+
+        Raises:
+        ValueError if obj is not a mesh or has no UV map.
+        """
+        assert self.has_one_mesh
+        mesh = self.mesh.data
+        if not mesh.uv_layers:
+            return None
+        uv_data = mesh.uv_layers.active.data
+
+        # Collect 3D and UV face areas
+        areas_3d = []
+        areas_uv = []
+
+        for poly in mesh.polygons:
+            # 3D area built in
+            a3 = poly.area
+            areas_3d.append(a3)
+
+            # Gather UV coords for this face
+            uv_coords = [uv_data[li].uv.copy() for li in poly.loop_indices]
+            # Compute UV area by 2D shoelace formula
+            area2d = 0.0
+            n = len(uv_coords)
+            for i in range(n):
+                x0, y0 = uv_coords[i]
+                x1, y1 = uv_coords[(i + 1) % n]
+                area2d += (x0 * y1) - (x1 * y0)
+            areas_uv.append(abs(area2d) * 0.5)
+
+        # Normalize to distributions
+        total3 = sum(areas_3d)
+        totaluv = sum(areas_uv)
+        if total3 == 0 or totaluv == 0:
+            return 0.0
+
+        dist3 = [a / total3 for a in areas_3d]
+        distuv = [a / totaluv for a in areas_uv]
+
+        # L1 distance between distributions
+        l1 = sum(abs(d3 - du) for d3, du in zip(dist3, distuv))
+        # Map [0,2] → [1,0]
+        return max(0.0, 1.0 - (l1 / 2.0))
 
     def plot_diffuse(self):
         images_pil = self.textures
@@ -148,64 +217,50 @@ class Object3D(abc.ABC):
         image_pil = Image.fromarray(pixels, "RGBA")
         return image_pil, self.draw_uv_map()
 
-    @property
-    def uv_score(self) -> float | None:
-        """
-        Estimate how well the active UV map of a mesh object preserves 3D face areas.
-
-        Returns a float in [0,1], where 1 means exact area‐preservation (UV areas
-        perfectly proportional to 3D areas), and 0 means no correlation.
-
-        Method:
-        1. For each polygon, get its 3D area (mesh.polygons[].area) and UV area
-            (via 2D shoelace on its UV coordinates).
-        2. Build two distributions: A3d_i / sum(A3d) and Auv_i / sum(Auv).
-        3. The L1 distance between these two distributions is in [0,2]. We map
-            that to [1,0] by doing similarity = 1 - (L1 / 2).
-
-        Requirements:
-        - The mesh must have exactly one UV map (active).
-        - Faces may be n-gons; their UV area is computed in 2D by shoelace.
-
-        Raises:
-        ValueError if obj is not a mesh or has no UV map.
-        """
+    def render(self, distance=1.5, samples=256, size=(768, 512), views=4) -> list[Image.Image]:
         assert self.has_one_mesh
-        mesh = self.mesh.data
-        if not mesh.uv_layers:
-            return None
-        uv_data = mesh.uv_layers.active.data
+        scene = bpy.context.scene
 
-        # Collect 3D and UV face areas
-        areas_3d = []
-        areas_uv = []
+        if not self.has_rendered:
+            # Add camera
+            scene.camera = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
 
-        for poly in mesh.polygons:
-            # 3D area built in
-            a3 = poly.area
-            areas_3d.append(a3)
+            # Setup light
+            key_data = bpy.data.lights.new("KeyLight", "SUN")
+            key = bpy.data.objects.new("KeyLight", key_data)
+            bpy.context.collection.objects.link(key)
+            key.rotation_euler = (0.7854, 0, 0.7854)
+            fill_data = bpy.data.lights.new("FillLight", "POINT")
+            fill = bpy.data.objects.new("FillLight", fill_data)
+            bpy.context.collection.objects.link(fill)
+            cam_loc = scene.camera.location
+            fill.location = cam_loc * 0.5
+            key_data.energy = 1.0
+            fill_data.energy = 30.0
+            self.has_rendered = True
 
-            # Gather UV coords for this face
-            uv_coords = [uv_data[li].uv.copy() for li in poly.loop_indices]
-            # Compute UV area by 2D shoelace formula
-            area2d = 0.0
-            n = len(uv_coords)
-            for i in range(n):
-                x0, y0 = uv_coords[i]
-                x1, y1 = uv_coords[(i + 1) % n]
-                area2d += (x0 * y1) - (x1 * y0)
-            areas_uv.append(abs(area2d) * 0.5)
+        # Configure render
+        scene.render.film_transparent = True
+        scene.render.engine = "CYCLES"
+        scene.cycles.samples = samples
+        scene.render.resolution_x, scene.render.resolution_y = size
+        print(self.path)
 
-        # Normalize to distributions
-        total3 = sum(areas_3d)
-        totaluv = sum(areas_uv)
-        if total3 == 0 or totaluv == 0:
-            return 0.0
+        # Launch rendering
+        radius = distance * max(1.0, self.mesh.dimensions.length)
+        images = []
+        for ang in map(math.radians, tqdm(range(45, 45 + 360, 360 // views))):
+            scene.camera.location = Vector((radius * math.cos(ang), radius * math.sin(ang), 0.0))
+            scene.camera.rotation_euler = (
+                (Vector((0, 0, 0)) - scene.camera.location).to_track_quat("-Z", "Y").to_euler()
+            )
+            fd, path = tempfile.mkstemp(suffix=".png")
+            os.close(fd)
+            scene.render.filepath = path
+            bpy.ops.render.render(write_still=True)
 
-        dist3 = [a / total3 for a in areas_3d]
-        distuv = [a / totaluv for a in areas_uv]
+            img = Image.open(path).convert("RGBA")
+            images.append(img)
+            os.remove(path)
 
-        # L1 distance between distributions
-        l1 = sum(abs(d3 - du) for d3, du in zip(dist3, distuv))
-        # Map [0,2] → [1,0]
-        return max(0.0, 1.0 - (l1 / 2.0))
+        return images

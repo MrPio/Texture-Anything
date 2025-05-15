@@ -27,5 +27,6 @@ class ShapeNetCoreDataset3D(Dataset3D):
     def __getitem__(self, key) -> ShapeNetCoreObject3D:
         try:
             return ShapeNetCoreObject3D(key, self.paths[key])
-        except:
+        except Exception as e:
+            print(e)
             return None

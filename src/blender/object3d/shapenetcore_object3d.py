@@ -21,7 +21,7 @@ class ShapeNetCoreObject3D(Object3D):
             return None
 
     @cached_property
-    def render(self) -> PIL.Image.Image | None:
+    def rendering(self) -> PIL.Image.Image | None:
         from src.dataset.shapenetcore_dataset3d import ShapeNetCoreDataset3D
 
         path = ShapeNetCoreDataset3D.DATASET_PATH / "render" / f"{self.uid}.jpg"

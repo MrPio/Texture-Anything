@@ -35,7 +35,7 @@ class ObjaverseObject3D(Object3D):
         return images_pil
 
     @cached_property
-    def render(self) -> PIL.Image.Image | None:
+    def rendering(self) -> PIL.Image.Image | None:
         from src.dataset.objaverse_dataset3d import ObjaverseDataset3D
 
         path = ObjaverseDataset3D.DATASET_PATH / "render" / f"{self.uid}.jpg"
