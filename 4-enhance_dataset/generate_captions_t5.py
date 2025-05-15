@@ -37,8 +37,8 @@ rank, size = comm.Get_rank(), comm.Get_size()
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=str, default="data/dataset/objaverse/render/")
-    parser.add_argument("--output", type=str, default="data/dataset/objaverse/caption/captions_t5.json")
+    parser.add_argument("--input", type=str, default="dataset/objaverse/render/")
+    parser.add_argument("--output", type=str, default="dataset/objaverse/caption/captions_t5.json")
     parser.add_argument("--demo", action="store_true")
     return parser.parse_args()
 

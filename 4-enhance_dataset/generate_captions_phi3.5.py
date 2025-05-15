@@ -37,8 +37,8 @@ from src import *
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=str, default="data/dataset/objaverse/render/")
-    parser.add_argument("--output", type=str, default="data/dataset/objaverse/caption/captions_phi35.json")
+    parser.add_argument("--input", type=str, default="dataset/objaverse/render/")
+    parser.add_argument("--output", type=str, default="dataset/objaverse/caption/captions_phi35.json")
     parser.add_argument("-d", "--demo", action="store_true")
     return parser.parse_args()
 

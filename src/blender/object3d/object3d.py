@@ -12,8 +12,6 @@ import math
 import numpy as np
 from mathutils import Vector
 
-DATASET_PATH = Path(__file__).resolve().parent.parent.parent.parent / "data/dataset"
-
 
 class Object3D(abc.ABC):
     """Represents a 3d object. Methods are meant to be called on objects containing 1 mesh, 1 UV and 1 diffuse texture.
@@ -151,7 +149,7 @@ class Object3D(abc.ABC):
         return image_pil, self.draw_uv_map()
 
     @property
-    def uv_score(self) -> float:
+    def uv_score(self) -> float | None:
         """
         Estimate how well the active UV map of a mesh object preserves 3D face areas.
 
@@ -175,7 +173,7 @@ class Object3D(abc.ABC):
         assert self.has_one_mesh
         mesh = self.mesh.data
         if not mesh.uv_layers:
-            raise ValueError("Mesh has no UV layers")
+            return None
         uv_data = mesh.uv_layers.active.data
 
         # Collect 3D and UV face areas

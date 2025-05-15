@@ -1,7 +1,7 @@
 import logging
 from rich.logging import RichHandler
 
-logging.basicConfig(level="WARNING", format="%(message)s", handlers=[RichHandler(markup=True)])
+logging.basicConfig(level="INFO", format="%(message)s", handlers=[RichHandler(markup=True, show_path=False)])
 logger = logging.getLogger("src")
 
 COLORS = [

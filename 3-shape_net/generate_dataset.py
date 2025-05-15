@@ -20,9 +20,9 @@ statistics = pd.read_parquet(SCRIPT_DIR / "statistics.parquet")
 selected_uids = statistics[statistics["valid"]].index
 dataset = load_shapenetcore_objects()
 for folder in ["render", "uv", "diffuse", "caption"]:
-    os.makedirs(ROOT_PATH / f"data/dataset/shapenetcore/{folder}", exist_ok=True)
+    os.makedirs(ROOT_PATH / f"dataset/shapenetcore/{folder}", exist_ok=True)
 
-already_downloaded_uids = [os.path.splitext(x)[0] for x in os.listdir(Path(ROOT_PATH, f"data/dataset/shapenetcore/uv"))]
+already_downloaded_uids = [os.path.splitext(x)[0] for x in os.listdir(Path(ROOT_PATH, f"dataset/shapenetcore/uv"))]
 
 
 for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
@@ -48,5 +48,5 @@ for uid in tqdm(selected_uids[TASK_ID::NUM_TASK]):
         continue
 
     # Commit
-    diffuse[0].save(ROOT_PATH / f"data/dataset/shapenetcore/diffuse/{uid}.png")
-    uv_map.save(ROOT_PATH / f"data/dataset/shapenetcore/uv/{uid}.png")
+    diffuse[0].save(ROOT_PATH / f"dataset/shapenetcore/diffuse/{uid}.png")
+    uv_map.save(ROOT_PATH / f"dataset/shapenetcore/uv/{uid}.png")

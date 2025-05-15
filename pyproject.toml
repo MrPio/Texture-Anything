@@ -1,0 +1,4 @@
+[project]
+name = "texture-anything"
+version = "0.1"
+requires-python = ">=3.8"

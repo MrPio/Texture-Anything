@@ -4,7 +4,7 @@ from pathlib import Path
 import requests
 
 import PIL
-from .object3d import DATASET_PATH, Object3D
+from .object3d import Object3D
 import numpy as np
 from PIL import Image
 
@@ -36,7 +36,11 @@ class ObjaverseObject3D(Object3D):
 
     @cached_property
     def render(self) -> PIL.Image.Image | None:
-        path = DATASET_PATH / "objaverse/render" / f"{self.uid}.jpg"
+        from src.dataset.objaverse_dataset3d import ObjaverseDataset3D
+
+        path = ObjaverseDataset3D.DATASET_PATH / "render" / f"{self.uid}.jpg"
         return PIL.Image.open(
-            path if path.exists() else requests.get(self.dataset.annotations.loc[self.uid]["thumbnail"],stream=True).raw
+            path
+            if path.exists()
+            else requests.get(self.dataset.annotations.loc[self.uid]["thumbnail"], stream=True).raw
         )

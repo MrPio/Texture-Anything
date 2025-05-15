@@ -1,6 +1,5 @@
 .env
 .venv/
-.objaverse/
 .huggingface/
 /**/.textures
 /**/logs
@@ -11,12 +10,13 @@
 1-annotations_filtering/objaverse_cleaned.parquet
 .vscode/
 
-data/0-annotations.pkl
-data/1-annotations_filtered.parquet
-data/dataset/objaverse/diffuse/*
-data/dataset/objaverse/uv/*
-data/dataset/objaverse/render/*
-data/dataset/shapenetcore/diffuse/**
-data/dataset/shapenetcore/uv/*
-data/dataset/shapenetcore/render/*
-.shapenet/
+dataset/objaverse/0-annotations.pkl
+dataset/objaverse/1-annotations_filtered.parquet
+dataset/objaverse/objects/**
+dataset/objaverse/diffuse/**
+dataset/objaverse/uv/**
+dataset/objaverse/render/**
+dataset/shapenetcore/objects**
+dataset/shapenetcore/diffuse/**
+dataset/shapenetcore/uv/**
+dataset/shapenetcore/render/**

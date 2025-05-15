@@ -1,3 +1,4 @@
+import logging
 import bpy
 import PIL
 
@@ -64,5 +65,11 @@ def load_model(path: str, reset_scene: bool = True) -> list:
     """
     if reset_scene:
         __reset_scene()
-    (bpy.ops.wm.obj_import if path.endswith(".obj") else bpy.ops.import_scene.gltf)(filepath=path)
+    if path.endswith(".obj"):
+        bpy.ops.wm.obj_import(filepath=path)
+    else:
+        bpy.ops.import_scene.gltf(filepath=path, loglevel=40)
+        for l in logging.root.manager.loggerDict:
+            if "glTF" in l:
+                logging.getLogger(l).disabled = True
     return list(bpy.context.scene.objects)
