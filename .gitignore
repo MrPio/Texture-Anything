@@ -16,7 +16,7 @@ dataset/objaverse/objects/**
 dataset/objaverse/diffuse/**
 dataset/objaverse/uv/**
 dataset/objaverse/render/**
-dataset/shapenetcore/objects**
+dataset/shapenetcore/objects/**
 dataset/shapenetcore/diffuse/**
 dataset/shapenetcore/uv/**
 dataset/shapenetcore/render/**

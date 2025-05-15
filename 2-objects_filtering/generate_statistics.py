@@ -63,16 +63,13 @@ if rank == 0:
     log("Each task has to process", len(paths) - len(statistics) // size, "objects")
 
 for uid, path in tqdm(paths) if rank == 0 else paths:
-    try:
-        if (obj := dataset[uid]) is not None:
-            statistics.loc[uid] = [
-                len(obj.meshes),
-                obj.mesh_stats["uv_count"] if obj.has_one_mesh else None,
-                obj.mesh_stats["texture_count"] if obj.has_one_mesh else None,
-                obj.uv_score if obj.has_one_mesh else None,
-            ]
-    except:
-        continue
+    if (obj := dataset[uid]) is not None:
+        statistics.loc[uid] = [
+            len(obj.meshes),
+            obj.mesh_stats["uv_count"] if obj.has_one_mesh else None,
+            obj.mesh_stats["texture_count"] if obj.has_one_mesh else None,
+            obj.uv_score if obj.has_one_mesh else None,
+        ]
 # Syncronize the partial results to the root task
 log("Rank", rank, "has done processing statistics.")
 all_statistics: list[pd.DataFrame] = comm.gather(statistics, root=0)

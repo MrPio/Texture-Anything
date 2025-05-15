@@ -1,6 +1,5 @@
 """
 Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse texture.
-On a single compute node, takes 50m for 6_000 objects.
 This script is CWD-independent
 
 Usage:
