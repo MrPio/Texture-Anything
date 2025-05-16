@@ -1,9 +1,11 @@
 from functools import cached_property
 import os
+from shutil import rmtree
 from zipfile import ZipFile
 import pandas as pd
 import requests
 from tqdm import tqdm
+import trimesh
 from .dataset3d import Dataset3D
 from ..blender.object3d.shapenetcore_object3d import ShapeNetCoreObject3D
 
@@ -85,24 +87,34 @@ class ShapeNetCoreDataset3D(Dataset3D):
             for m in p.iterdir()
         }
 
-    def download(self, first=-1) -> None:
+    def download(self, first=-1, fresh=False) -> None:
         """Download the ShapeNetCore dataset
 
         Args:
             first (int): Number of categories to process (use -1 for all).
+            fresh (bool): Wheter to re-download any existent category.
         """
         chunk_size = 16_384
         base_url = "https://huggingface.co/datasets/ShapeNet/ShapeNetCore/resolve/main/"
+        objects_path = self.DATASET_PATH / "objects"
         headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}
+        already_downloaded = list(f.stem for f in objects_path.glob("*") if f.is_dir())
 
         selected_cats = self.CATEGORIES[::-1]
         if first > 0:
             selected_cats = selected_cats[:first]
 
-        for i, cat in enumerate(selected_cats):
+        for i, cat in enumerate(selected_cats, start=1):
+            if cat in already_downloaded:
+                if fresh:
+                    print(f"Removing already downloaded category {cat}.")
+                    rmtree(objects_path / cat)
+                else:
+                    print(f"Skipping category {cat} because already downloaded.")
+                    continue
             print(i, "/", len(self.CATEGORIES))
             response = requests.get(f"{base_url}{cat}.zip", headers=headers, stream=True)
-            zip_path = self.DATASET_PATH / "objects" / f"{cat}.zip"
+            zip_path = objects_path / f"{cat}.zip"
             total_size = int(response.headers.get("content-length", 0))
 
             with open(zip_path, "wb") as f, tqdm(
@@ -118,5 +130,14 @@ class ShapeNetCoreDataset3D(Dataset3D):
                         pbar.update(len(chunk))
 
             with ZipFile(zip_path, "r") as zf:
-                zf.extractall(path=self.DATASET_PATH / "objects")
+                zf.extractall(path=objects_path)
             zip_path.unlink()
+
+            # Remove unnecessary surfice and volume voxel files
+            for binvox in tqdm(objects_path.rglob("*.binvox"), leave=False, desc="Removing binvox files"):
+                binvox.unlink()
+
+            # Convert OBJ to GLB for better compatibility with blender
+            for obj in tqdm(list(objects_path.rglob("*.obj")), leave=False, desc="Converting OBJ to GLB"):
+                trimesh.load(obj).export(str(obj).replace(".obj", ".glb"), file_type="glb")
+                # obj.unlink()

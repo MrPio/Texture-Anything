@@ -8,8 +8,8 @@ import os
 
 
 class ShapeNetCoreObject3D(Object3D):
-    def __init__(self, uid: str, path: str | Path):
-        super(ShapeNetCoreObject3D, self).__init__(uid, Path(path, "models", "model_normalized.obj"))
+    def __init__(self, uid: str, path: str | Path, type='glb'):
+        super(ShapeNetCoreObject3D, self).__init__(uid, Path(path, "models", f"model_normalized.{type}"))
 
     @property
     def textures(self) -> list[Image.Image]:
