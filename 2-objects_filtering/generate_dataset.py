@@ -18,7 +18,7 @@ import PIL.Image as PILImage
 import requests
 from pathlib import Path
 
-ROOT_PATH = Path(__file__).resolve().parent.parent
+ROOT_PATH = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_PATH))
 from src import *
 from mpi4py import MPI

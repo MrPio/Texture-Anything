@@ -10,7 +10,7 @@ class ObjaverseDataset3D(Dataset3D):
 
     def __init__(self):
         objaverse._VERSIONED_PATH = str(ObjaverseDataset3D.DATASET_PATH / "objects")
-        super().__init__("objaverse")
+        super().__init__("objaverse", ObjaverseObject3D)
 
     @cached_property
     def annotations(self) -> pd.DataFrame | None:
@@ -20,12 +20,6 @@ class ObjaverseDataset3D(Dataset3D):
     def paths(self) -> dict[str, str]:
         num_objs = sum(1 for _ in (ObjaverseDataset3D.DATASET_PATH / "objects").rglob("*.glb"))
         return objaverse.load_objects(self.annotations.index[:num_objs])
-
-    def __getitem__(self, key) -> ObjaverseObject3D | None:
-        try:
-            return ObjaverseObject3D(key, self.paths[key])
-        except:
-            return None
 
     def download(self, processes=16) -> None:
         objaverse.load_objects(self.annotations.index, download_processes=processes)

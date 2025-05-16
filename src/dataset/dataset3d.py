@@ -10,11 +10,15 @@ from ..blender.object3d.object3d import Object3D
 class Dataset3D(abc.ABC):
     """Represents a dataset of 3D objects."""
 
-    DATASET_PATH = Path(__file__).parent.parent.parent.resolve() / "dataset"
+    DATASET_PATH = Path(__file__).resolve().parents[2] / "dataset"
+    DATASET_SUBFOLDERS = ["uv", "render", "diffuse", "objects"]
     IMG_EXT = [".jpg", ".png"]
 
-    def __init__(self, dataset_folder: str):
+    def __init__(self, dataset_folder: str, object_class: type[Object3D]):
+        for folder in Dataset3D.DATASET_SUBFOLDERS:
+            (Dataset3D.DATASET_PATH / dataset_folder / folder).mkdir(parents=True, exist_ok=True)
         self.dataset_folder = dataset_folder
+        self.object_class = object_class
 
     @property
     @abc.abstractmethod
@@ -52,8 +56,12 @@ class Dataset3D(abc.ABC):
         diffuses = {x.stem for x in (path / "diffuse").glob("*") if x.suffix.lower() in Dataset3D.IMG_EXT}
         return captions.intersection(uvs, diffuses)
 
-    @abc.abstractmethod
-    def __getitem__(self, key) -> Object3D: ...
+    def __getitem__(self, key) -> Object3D | None:
+        try:
+            return self.object_class(key, self.paths[key])
+        except Exception as e:
+            print(e)
+            return None
 
     def download(self) -> None:
         raise NotImplementedError()

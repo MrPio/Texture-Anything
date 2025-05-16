@@ -28,7 +28,7 @@ from PIL import Image
 from mpi4py import MPI
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
 
-ROOT_PATH = Path(__file__).parent.parent.resolve()
+ROOT_PATH = Path(__file__).resolve().parents[1]
 CACHE_PATH = ROOT_PATH / ".huggingface"
 
 comm = MPI.COMM_WORLD

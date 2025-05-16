@@ -8,7 +8,7 @@ import torch
 from huggingface_hub import login
 import os
 
-ROOT_PATH = Path(__file__).parent.parent.resolve()
+ROOT_PATH = Path(__file__).resolve().parents[1]
 CACHE_PATH = ROOT_PATH / ".huggingface"
 
 model_id = "meta-llama/Llama-4-Scout-17B-16E-Instruct"

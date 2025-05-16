@@ -16,7 +16,7 @@ class ShapeNetCoreObject3D(Object3D):
         """Load all the diffuse texture images in the image folder as PIL"""
         files = [x.image.name for x in self._mesh_nodes]
         try:
-            return [Image.open(self.path.parent.parent / "images" / x) for x in files]
+            return [Image.open(self.path.parents[1] / "images" / x) for x in files]
         except:
             return None
 

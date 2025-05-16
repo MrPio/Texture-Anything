@@ -30,7 +30,7 @@ from transformers import AutoProcessor
 from mpi4py import MPI
 import sys
 
-ROOT_PATH = Path(__file__).resolve().parent.parent
+ROOT_PATH = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_PATH))
 from src import *
 
