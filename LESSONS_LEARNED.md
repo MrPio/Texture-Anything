@@ -1,5 +1,26 @@
 # Lessons Learned
 
+- [Lessons Learned](#lessons-learned)
+  - [Blender has difficulties in read OBJ](#blender-has-difficulties-in-read-obj)
+  - [Work with multiple site-packages (one in venv, one global)](#work-with-multiple-site-packages-one-in-venv-one-global)
+  - [How I was able to achieve massive parallelism](#how-i-was-able-to-achieve-massive-parallelism)
+  - [How I was able to install `mpi4py` on Cineca's Leonardo HPC](#how-i-was-able-to-install-mpi4py-on-cinecas-leonardo-hpc)
+    - [Test script](#test-script)
+
+
+## Blender has difficulties in read OBJ
+Shapenetcore files are in the OBJ format. Trimesh has no problems in reading them, but blender's renderings are glitchy. Thus, I first exported them as GLB files using
+
+```python
+trimesh.load(obj).export(file_path, file_type="glb")
+```
+
+Then when I load one of them into blender(BPY), I merge vertices by distance to avoid black faces in CYCLES renderings.
+
+See more in [`ShapeNetCoreDataset3D::download()`](src/dataset/shapenetcore_dataset3d.py) and in [`ShapeNetCoreObject3D::__init__()`](src/blender/object3d/shapenetcore_object3d.py).
+
+
+
 ## Work with multiple site-packages (one in venv, one global)
 
 Do `export PYTHONPATH=$HOME/.local/lib/python3.11/site-packages:$PYTHONPATH`.
