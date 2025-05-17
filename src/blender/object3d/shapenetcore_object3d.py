@@ -13,7 +13,11 @@ import bpy
 class ShapeNetCoreObject3D(Object3D):
     def __init__(self, uid: str, path: str | Path, type="glb"):
         super(ShapeNetCoreObject3D, self).__init__(uid, Path(path, "models", f"model_normalized.{type}"))
-        if type == "glb": #and len(self.meshes) > 1:
+        if type == "glb":
+            # Remove the parent axis object
+            bpy.data.objects.remove(bpy.data.objects["world"], do_unlink=True)
+
+            # Remove useless meshes and merge vertices by distance
             meshes = []
             for mesh in self.meshes:
                 if is_textured(mesh):
@@ -27,15 +31,8 @@ class ShapeNetCoreObject3D(Object3D):
                 else:
                     bpy.data.objects.remove(mesh, do_unlink=True)
 
-            # bpy.ops.object.select_all(action="DESELECT")
-            # for obj in self.meshes:
-            #     obj.select_set(True)
-            # bpy.context.view_layer.objects.active = self.meshes[0]
-            # bpy.ops.object.join()
-            # self.meshes = [self.mesh]
-            # self.has_one_mesh = True
             self.meshes = meshes
-            self.mesh=meshes[0]
+            self.mesh = meshes[0]
             self.has_one_mesh = len(meshes) == 1
 
     @property

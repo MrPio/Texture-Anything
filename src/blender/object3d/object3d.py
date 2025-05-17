@@ -28,7 +28,8 @@ class Object3D(abc.ABC):
         path: the absolute path of the file
     """
 
-    HDRI_PATH = Path(__file__).resolve().parents[2] / "colorful_studio_4k.exr"
+    HDRI_PATH = Path(__file__).resolve().parents[1] / "hdri" / "colorful_studio_4k.exr"
+    HDRI_PATH_WHITE = Path(__file__).resolve().parents[1] / "hdri" / "white.exr"
 
     def __init__(self, uid: str, path: str | Path):
         self.uid = uid
@@ -166,64 +167,63 @@ class Object3D(abc.ABC):
 
         return img
 
-    def regenerate_uv_map(self, island_margin=0.03) -> tuple[Image.Image, Image.Image]:
+    def regenerate_uv_map(self, island_margin=0, size=512, samples=8) -> tuple[Image.Image, Image.Image]:
         """Regenerate a new UV map and Bake the diffuse texture accordingly.
 
         Returns:
             tuple[Image.Image, Image.Image]: The new texture and the drawing of the new UV map.
         """
-        new_uv_name = "SmartUV"
-        bake_image_name = "BakedTexture"
-        bake_image_size = 1024
-
         assert self.has_one_mesh
 
         # Switch to Object mode
         bpy.ops.object.mode_set(mode="OBJECT")
         mesh = self.mesh.data
+        self.mesh.select_set(True)
+        bpy.context.view_layer.objects.active = self.mesh
 
         # 1. Duplicate the existing UV map
-        uv_layer = mesh.uv_layers.active
-        mesh.uv_layers.new(name=new_uv_name)
-        mesh.uv_layers.active = mesh.uv_layers[new_uv_name]
+        mesh.uv_layers.new(name="SmartUV")
+        mesh.uv_layers.active = mesh.uv_layers["SmartUV"]
 
         # 2. Smart UV unwrap
         bpy.context.view_layer.objects.active = self.mesh
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
-        bpy.ops.uv.smart_project(angle_limit=66, island_margin=island_margin)
+        bpy.ops.uv.smart_project(island_margin=island_margin)
         bpy.ops.object.mode_set(mode="OBJECT")
 
         # 3. Create new image to bake into
-        image = bpy.data.images.new(bake_image_name, width=bake_image_size, height=bake_image_size)
-
-        # 4. Assign image to active UV map
-        if not mesh.uv_layers.active.data:
-            raise RuntimeError("UV map has no data.")
-
-        # Create image texture node and assign image
+        img = bpy.data.images.new("BakedTexture", size, size)
         mat = self.mesh.active_material
         nodes = mat.node_tree.nodes
+
+        # Create and activate the new texture node
         tex_node = nodes.new("ShaderNodeTexImage")
-        tex_node.image = image
-        mat.node_tree.nodes.active = tex_node  # Mark active for baking
+        tex_node.image = img
+        # Make sure it's the active one for baking
+        mat.node_tree.nodes.active = tex_node
 
         # 5. Bake the texture to the new image
-        # bpy.context.view_layer.objects.active = self.mesh
+        load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=1.5)
         bpy.context.scene.render.engine = "CYCLES"
-        bpy.ops.object.bake(type="DIFFUSE", pass_filter={"COLOR"}, use_clear=True)
+        bpy.context.scene.cycles.samples = samples
+        bpy.ops.object.bake(type="GLOSSY")
 
-        # 6. Save baked image (optional)
-        pixels = (np.array(image.pixels) * 255).astype(np.uint8)
-        pixels = pixels.reshape((*image.size, 4))
+        # 6. Convert to PIL
+        pixels = (np.array(img.pixels) * 255).astype(np.uint8)
+        pixels = pixels.reshape(img.size[1], img.size[0], 4)
         image_pil = Image.fromarray(pixels, "RGBA")
+
         return image_pil, self.draw_uv_map()
+
+    def export(self, path: Path | str):
+        bpy.ops.wm.save_as_mainfile(filepath=str(path))
 
     def render(
         self,
         distance=1.5,
-        samples=256,
-        size=(768, 512),
+        samples=1,
+        size=(512, 512),
         views=4,
         save_scene: Optional[str | Path] = None,
         light_strength=2.0,
@@ -237,7 +237,7 @@ class Object3D(abc.ABC):
         load_hdri(Object3D.HDRI_PATH, rotation=0, strength=light_strength)
 
         if save_scene:
-            bpy.ops.wm.save_as_mainfile(filepath=str(save_scene))
+            self.export(save_scene)
 
         # Configure render
         scene.render.film_transparent = True

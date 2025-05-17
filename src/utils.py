@@ -3,7 +3,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 
-def plot_images(images: list[Image.Image], size=4, cols: int = 1):
+def plot_images(images: list[Image.Image], size=4, cols: int = None):
     """Plot a list of PIL images in a grid
 
     Args:
@@ -11,6 +11,8 @@ def plot_images(images: list[Image.Image], size=4, cols: int = 1):
         size (int, optional): the size in inch of the images
         col (int, optional): The number of columns of the grid. Defaults to 1.
     """
+    if not cols:
+        cols = min(4, len(images))
     rows = math.ceil(len(images) / cols)
     _, axes = plt.subplots(rows, cols, figsize=(cols * size, rows * size))
     if rows > 1 or cols > 1:
