@@ -11,6 +11,12 @@ from .blender.object3d.objaverse_object3d import ObjaverseObject3D
 # Datasets
 from .dataset.objaverse_dataset3d import ObjaverseDataset3D
 from .dataset.shapenetcore_dataset3d import ShapeNetCoreDataset3D
+from .dataset.dataset3d import Dataset3D
+
+datasets: dict[str, type[Dataset3D]] = {
+    "objaverse": ObjaverseDataset3D,
+    "shapenetcore": ShapeNetCoreDataset3D,
+}
 
 # Misc
 from .utils import plot_images, compute_image_density, is_textured

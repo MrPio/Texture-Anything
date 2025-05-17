@@ -31,9 +31,10 @@ rank, size = comm.Get_rank(), comm.Get_size()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--demo", action="store_true")
+parser.add_argument("--dataset", type=str, default="objaverse")
 args = parser.parse_args()
 
-dataset = ObjaverseDataset3D()
+dataset = datasets[args.dataset]()
 statistics = (
     dataset.statistics.drop(columns=["valid"])
     if dataset.statistics is not None and not args.demo
@@ -82,4 +83,4 @@ if rank == 0:
     if args.demo:
         log(final_statistics)
     else:
-        final_statistics.to_parquet(ObjaverseDataset3D.DATASET_PATH / "statistics.parquet")
+        final_statistics.to_parquet(datasets[args.dataset].DATASET_PATH / "statistics.parquet")

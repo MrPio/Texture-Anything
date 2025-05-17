@@ -28,18 +28,13 @@ class Dataset3D(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def statistics(self) -> pd.DataFrame:
-        """The statistics generated on the downloaded models. Columns are: `meshCount`, `uvCount`, `diffuseCount`"""
-        ...
-
-    @property
-    @abc.abstractmethod
     def paths(self) -> dict[str, str]:
         """A `dict` with UID as key and object path as value"""
         ...
 
     @cached_property
     def statistics(self) -> Optional[pd.DataFrame]:
+        """The statistics generated on the downloaded models. Columns are: `meshCount`, `uvCount`, `diffuseCount`, `faceCount`"""
         p = self.DATASET_PATH / "statistics.parquet"
         if not p.exists():
             return None
