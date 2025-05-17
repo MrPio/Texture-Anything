@@ -1,4 +1,6 @@
 import logging
+import math
+from pathlib import Path
 import bpy
 import PIL
 
@@ -72,4 +74,34 @@ def load_model(path: str, reset_scene: bool = True) -> list:
         for l in logging.root.manager.loggerDict:
             if "glTF" in l:
                 logging.getLogger(l).disabled = True
+
     return list(bpy.context.scene.objects)
+
+
+def load_hdri(path: Path | str, rotation=0, strength=1):
+    # Ensure use_nodes is enabled for the world
+    world = bpy.data.worlds["World"]
+    world.use_nodes = True
+    nodes = world.node_tree.nodes
+    links = world.node_tree.links
+
+    # Clear existing nodes
+    nodes.clear()
+
+    # Create necessary nodes
+    env_tex_node = nodes.new(type="ShaderNodeTexEnvironment")
+    background_node = nodes.new(type="ShaderNodeBackground")
+    mapping_node = nodes.new(type="ShaderNodeMapping")
+    tex_coord_node = nodes.new(type="ShaderNodeTexCoord")
+    output_node = nodes.new(type="ShaderNodeOutputWorld")
+
+    # Load the HDRI image
+    env_tex_node.image = bpy.data.images.load(str(path), check_existing=True)
+    background_node.inputs["Strength"].default_value = strength
+    mapping_node.inputs["Rotation"].default_value[2] = math.radians(rotation)
+
+    # Link nodes
+    links.new(tex_coord_node.outputs["Generated"], mapping_node.inputs["Vector"])
+    links.new(mapping_node.outputs["Vector"], env_tex_node.inputs["Vector"])
+    links.new(env_tex_node.outputs["Color"], background_node.inputs["Color"])
+    links.new(background_node.outputs["Background"], output_node.inputs["Surface"])

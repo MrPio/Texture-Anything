@@ -5,10 +5,11 @@ import io
 import os
 from pathlib import Path
 import tempfile
+from typing import Optional
 
 from tqdm import tqdm
 import numpy as np
-from ..scene import load_model
+from ..scene import load_hdri, load_model
 from ...utils import plot_images
 import bmesh
 import bpy
@@ -27,6 +28,8 @@ class Object3D(abc.ABC):
         path: the absolute path of the file
     """
 
+    HDRI_PATH = Path(__file__).resolve().parents[2] / "colorful_studio_4k.exr"
+
     def __init__(self, uid: str, path: str | Path):
         self.uid = uid
         self.path = Path(path) if path is str else path
@@ -35,7 +38,6 @@ class Object3D(abc.ABC):
         self.meshes = [x for x in self.objects if x.type == "MESH"]
         self.has_one_mesh = len(self.meshes) == 1
         self.mesh = self.meshes[0]
-        self.has_rendered = False
 
     @property
     def _mesh_nodes(self):
@@ -217,38 +219,37 @@ class Object3D(abc.ABC):
         image_pil = Image.fromarray(pixels, "RGBA")
         return image_pil, self.draw_uv_map()
 
-    def render(self, distance=1.5, samples=256, size=(768, 512), views=4) -> list[Image.Image]:
-        assert self.has_one_mesh
+    def render(
+        self,
+        distance=1.5,
+        samples=256,
+        size=(768, 512),
+        views=4,
+        save_scene: Optional[str | Path] = None,
+        light_strength=2.0,
+    ) -> list[Image.Image]:
         scene = bpy.context.scene
 
-        if not self.has_rendered:
-            # Add camera
-            scene.camera = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
+        # Add camera
+        scene.camera = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
 
-            # Setup light
-            key_data = bpy.data.lights.new("KeyLight", "SUN")
-            key = bpy.data.objects.new("KeyLight", key_data)
-            bpy.context.collection.objects.link(key)
-            key.rotation_euler = (0.7854, 0, 0.7854)
-            fill_data = bpy.data.lights.new("FillLight", "POINT")
-            fill = bpy.data.objects.new("FillLight", fill_data)
-            bpy.context.collection.objects.link(fill)
-            cam_loc = scene.camera.location
-            fill.location = cam_loc * 0.5
-            key_data.energy = 1.0
-            fill_data.energy = 30.0
-            self.has_rendered = True
+        # Setup light
+        load_hdri(Object3D.HDRI_PATH, rotation=0, strength=light_strength)
+
+        if save_scene:
+            bpy.ops.wm.save_as_mainfile(filepath=str(save_scene))
 
         # Configure render
         scene.render.film_transparent = True
         scene.render.engine = "CYCLES"
         scene.cycles.samples = samples
         scene.render.resolution_x, scene.render.resolution_y = size
-        print(self.path)
 
         # Launch rendering
         radius = distance * max(1.0, self.mesh.dimensions.length)
         images = []
+        if views < 1:
+            return
         for ang in map(math.radians, tqdm(range(45, 45 + 360, 360 // views))):
             scene.camera.location = Vector((radius * math.cos(ang), radius * math.sin(ang), 0.0))
             scene.camera.rotation_euler = (

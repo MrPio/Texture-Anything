@@ -34,5 +34,23 @@ def compute_image_density(img: Image.Image, threshold=0) -> float:
 
     return non_transparent / len(pixels)
 
-def clog(*values:str):
-    logging.log
+
+def is_textured(mesh):
+    """Returns True if the material uses an image texture (not a flat color)"""
+
+    for mat_slot in mesh.material_slots:
+        mat = mat_slot.material
+        if not mat.use_nodes:
+            continue
+
+        principled = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        if not principled:
+            continue
+
+        base_color_input = principled.inputs.get("Base Color")
+        if base_color_input and base_color_input.is_linked:
+            from_node = base_color_input.links[0].from_node
+            if from_node.type == "TEX_IMAGE":
+                return True
+
+    return False
