@@ -12,7 +12,6 @@ Author:
 from io import BytesIO
 import multiprocessing
 from tqdm import tqdm
-import os
 import sys
 import PIL.Image as PILImage
 import requests
@@ -36,15 +35,13 @@ parser.add_argument(
     action="store_true",
     help="Whether to focus on thumbnail download or UV and diffusion extraction.",
 )
+parser.add_argument("--dataset", type=str, default="objaverse")
 args = parser.parse_args()
 
-dataset = ObjaverseDataset3D()
-for folder in ["render", "uv", "diffuse", "caption"]:
-    os.makedirs(Path(ROOT_PATH, f"dataset/objaverse/{folder}"), exist_ok=True)
-
+dataset = datasets[args.dataset]()
+dataset_path = dataset.DATASET_PATH
 already_processed_uids = [
-    os.path.splitext(x)[0]
-    for x in os.listdir(Path(ROOT_PATH, f"dataset/objaverse/{'uv' if args.computation_node else 'render'}"))
+    x.stem for x in (dataset_path / "uv" if args.computation_node else "render").glob("*") if x.is_file()
 ]
 print(f"Already processed {len(already_processed_uids)} objects")
 
@@ -66,8 +63,8 @@ if args.computation_node:
             continue
 
         # Commit
-        diffuse.save(Path(ROOT_PATH, f"dataset/objaverse/diffuse/{uid}.png"))
-        uv_map.save(Path(ROOT_PATH, f"dataset/objaverse/uv/{uid}.png"))
+        diffuse.save(dataset_path / "diffuse" / f"{uid}.png")
+        uv_map.save(dataset_path / "uv" / f"{uid}.png")
 else:
 
     def download_thumbnail(uid):
@@ -85,4 +82,4 @@ else:
             # Skip if the render resolution is less than 0.2MP
             if img is None or img.size[0] * img.size[1] < MIN_RENDER_MEGAPIXEL:
                 continue
-            img.save(Path(ROOT_PATH, f"dataset/objaverse/render/{uid}.jpg"))
+            img.save(dataset_path / "render" / f"{uid}.png")
