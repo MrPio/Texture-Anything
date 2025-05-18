@@ -1,4 +1,6 @@
-# Objaverse Annotations Filtering
+# Annotations Filtering
+
+This section filters dataset samples based on metadata. Only _Objaverse 1.0_ is considered here, since _ShapeNetCore_ does not provide any annotations.
 
 >[!IMPORTANT]Execution Order
 >The notebooks in this section form a pipeline and must be executed in order.

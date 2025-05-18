@@ -18,8 +18,9 @@ class ObjaverseDataset3D(Dataset3D):
 
     @cached_property
     def paths(self) -> dict[str, str]:
-        num_objs = sum(1 for _ in (ObjaverseDataset3D.DATASET_PATH / "objects").rglob("*.glb"))
-        return objaverse.load_objects(self.annotations.index[:num_objs])
+        # num_objs = sum(1 for _ in (ObjaverseDataset3D.DATASET_PATH / "objects").rglob("*.glb"))
+        # return objaverse.load_objects(self.annotations.index[:num_objs])
+        return {f.stem: str(f) for f in (self.DATASET_PATH / "objects").rglob("*.glb")}
 
     def download(self, processes=16) -> None:
         objaverse.load_objects(self.annotations.index, download_processes=processes)
