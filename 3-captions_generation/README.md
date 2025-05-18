@@ -1,4 +1,4 @@
-# Refine The Dataset
+# Generate Captions
 
 This section generates missing captions. To create captions, we need one or more renders of each object. Objaverse provides thumbnails, but ShapeNetCore needs a custom rendering script.
 
