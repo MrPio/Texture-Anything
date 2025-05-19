@@ -712,7 +712,7 @@ def make_train_dataset(args, tokenizer, accelerator):
         examples["conditioning_pixel_values"] = conditioning_images
         examples["input_ids"] = tokenize_captions(examples)
 
-        return examples 
+        return examples
 
     with accelerator.main_process_first():
         if args.max_train_samples is not None:
