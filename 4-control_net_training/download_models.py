@@ -7,9 +7,9 @@ from diffusers import ControlNetModel
 ROOT_PATH = Path(__file__).parents[1]
 DOWNLOAD_PATH = ROOT_PATH / ".huggingface"
 sys.path.insert(0, str(ROOT_PATH))
-from src import *
+from src import log
 
-SD_MODEL = "stabilityai/stable-diffusion-2-1"
+SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
 CNET_MODEL = "lllyasviel/sd-controlnet-mlsd"
 
 log("Downloading", f"blue:{SD_MODEL}", "to", f"red:{DOWNLOAD_PATH}")
