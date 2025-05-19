@@ -21,5 +21,4 @@ dataset/shapenetcore/diffuse/**
 dataset/shapenetcore/uv/**
 dataset/shapenetcore/render/**
 
-dataset/train/**
 4-control_net_training/dataset/
