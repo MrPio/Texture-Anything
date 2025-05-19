@@ -12,7 +12,7 @@ def plot_images(images: list[Image.Image], size=4, cols: int = None):
         col (int, optional): The number of columns of the grid. Defaults to 1.
     """
     if not cols:
-        cols = min(4, len(images))
+        cols = min(10, len(images))
     rows = math.ceil(len(images) / cols)
     _, axes = plt.subplots(rows, cols, figsize=(cols * size, rows * size))
     if rows > 1 or cols > 1:

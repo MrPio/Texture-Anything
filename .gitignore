@@ -22,4 +22,4 @@ dataset/shapenetcore/uv/**
 dataset/shapenetcore/render/**
 
 dataset/train/**
-dataset/test/**
+4-control_net_training/dataset/
