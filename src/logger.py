@@ -29,7 +29,10 @@ def log(*vals, use_log=True):
     """Log values, highlighting any prefixed by a color tag (e.g., 'red:error')."""
 
     def fmt(v):
-        v = str(v)
+        if isinstance(v, (int, float)):
+            v = f"blue:{v:,}"
+        else:
+            v = str(v)
         for c in COLORS:
             tag = f"{c}:"
             if v.startswith(tag):

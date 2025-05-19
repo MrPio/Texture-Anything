@@ -1,5 +1,6 @@
 import abc
 from functools import cached_property
+import json
 from pathlib import Path
 from typing import Optional
 import pandas as pd
@@ -12,7 +13,7 @@ class Dataset3D(abc.ABC):
 
     DATASET_PATH = Path(__file__).resolve().parents[2] / "dataset"
     DATASET_SUBFOLDERS = ["uv", "render", "diffuse", "objects"]
-    IMG_EXT = [".jpg", ".png"]
+    IMG_EXT = [".jpg", ".JPG", ".jpeg", ".JPEG", ".png", ".PNG"]
 
     def __init__(self, dataset_folder: str, object_class: type[Object3D]):
         for folder in Dataset3D.DATASET_SUBFOLDERS:
@@ -34,7 +35,7 @@ class Dataset3D(abc.ABC):
 
     @cached_property
     def statistics(self) -> Optional[pd.DataFrame]:
-        """The statistics generated on the downloaded models. Columns are: `meshCount`, `uvCount`, `diffuseCount`, `faceCount`"""
+        """The statistics generated on the downloaded models. Columns are: `meshCount`, `uvCount`, `diffuseCount`, `uvScore` and `valid`. The `valid` column enstablish if a sample meets all the requirements."""
         p = self.DATASET_PATH / "statistics.parquet"
         if not p.exists():
             return None
@@ -43,12 +44,15 @@ class Dataset3D(abc.ABC):
         return df
 
     @cached_property
+    def captions(self) -> dict[str, str]:
+        return json.load(open(self.DATASET_PATH / "caption" / "captions.json"))
+
+    @cached_property
     def triplets(self) -> set[str]:
         """Load the triplets dataset as intersection of uids in `caption`, `uv` and `diffuse` folders."""
-        path = Dataset3D.DATASET_PATH / self.dataset_folder
-        captions = {x.stem for x in (path / "render").glob("*") if x.suffix.lower() in Dataset3D.IMG_EXT}
-        uvs = {x.stem for x in (path / "uv").glob("*") if x.suffix.lower() in Dataset3D.IMG_EXT}
-        diffuses = {x.stem for x in (path / "diffuse").glob("*") if x.suffix.lower() in Dataset3D.IMG_EXT}
+        captions = {x.stem for x in (self.DATASET_PATH / "render").glob("*") if x.suffix in Dataset3D.IMG_EXT}
+        uvs = {x.stem for x in (self.DATASET_PATH / "uv").glob("*") if x.suffix in Dataset3D.IMG_EXT}
+        diffuses = {x.stem for x in (self.DATASET_PATH / "diffuse").glob("*") if x.suffix in Dataset3D.IMG_EXT}
         return captions.intersection(uvs, diffuses)
 
     def __getitem__(self, key) -> Object3D | None:

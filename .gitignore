@@ -20,3 +20,6 @@ dataset/shapenetcore/objects/**
 dataset/shapenetcore/diffuse/**
 dataset/shapenetcore/uv/**
 dataset/shapenetcore/render/**
+
+dataset/train/**
+dataset/test/**
