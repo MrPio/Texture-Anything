@@ -2,12 +2,15 @@
 
 ## TODO
 
-    - [ ] Add 3.1 in download method of ShapeNetCoreDataset3D
-    - [ ] The loss should not care about part of the texture not mapped?
-    - [ ] _Data Augmentation_:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture
+    - [ ] La MSE non deve pesare le zone non mappate
+    - [ ] Data Augmentation:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture
+    - [ ] Fare script di inferenza di CNET
+    - [ ] Provare 2.1 con dreambooth texture hell
+    - [ ] Rigenerare le texture di Objaverse
 
 ## DONE
 
+    - [x] Add 3.1 in download method of ShapeNetCoreDataset3D
     - [x] Generate the rendering of objects
     - [x] Define a UV map scoring function
     - [x] Generate captions from renders

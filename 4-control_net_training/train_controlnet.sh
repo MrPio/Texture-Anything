@@ -1,18 +1,37 @@
-export MODEL_DIR="stable-diffusion-v1-5/stable-diffusion-v1-5"
-export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/output"
+#!/bin/bash
+#SBATCH --job-name=controlnet_sd15
+#SBATCH --output=controlnet_sd15.log
+#SBATCH --error=controlnet_sd15.log
+#SBATCH --time=12:00:00
+#SBATCH --partition=boost_usr_prod
+##SBATCH --qos=boost_qos_dbg                  # Refer to https://wiki.u-gov.it/confluence/display/SCAIUS/Booster+Section
+#SBATCH --gres=gpu:2
+#SBATCH --mem=64G
+
+export SD_MODEL="stable-diffusion-v1-5/stable-diffusion-v1-5"
+export CNET_MODEL="lllyasviel/sd-controlnet-mlsd"
+export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/SD1.5_CNmlsd_192bs_8e-6lr_13k"
 export CACHE_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/.huggingface"
 export DATASET_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/dataset"
 
-# accelerate launch --mixed_precision="fp16" --multi_gpu train_controlnet.py \
-accelerate launch train_controlnet.py \
-    --pretrained_model_name_or_path=$MODEL_DIR \
+cd /leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training
+
+# accelerate launch train_controlnet.py \
+accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet.py \
+    --pretrained_model_name_or_path=$SD_MODEL \
+    --controlnet_model_name_or_path=$CNET_MODEL \
     --output_dir=$OUTPUT_DIR \
     --cache_dir=$CACHE_DIR \
     --train_data_dir=$DATASET_DIR \
+    --image_column="diffuse" \
+    --conditioning_image_column="uv" \
+    --caption_column="caption" \
     \
     --resolution=512 \
-    --learning_rate=1e-5 \
-    --train_batch_size=4 \
+    --num_train_epochs=32 \
+    --learning_rate=5e-6 \
+    --train_batch_size=8 \
+    --gradient_accumulation_steps=12 \
     --mixed_precision="fp16" \
     \
     --validation_image \
