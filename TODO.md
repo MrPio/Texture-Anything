@@ -6,7 +6,8 @@
     - [ ] Data Augmentation:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture
     - [ ] Fare script di inferenza di CNET
     - [ ] Provare 2.1 con dreambooth texture hell
-    - [ ] Rigenerare le texture di Objaverse
+    - [ ] Rigenerare le texture/UV di Objaverse con smart
+    - [ ] Invertire le UV
 
 ## DONE
 
