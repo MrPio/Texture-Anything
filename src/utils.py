@@ -1,9 +1,10 @@
 import math
+from pathlib import Path
 from PIL import Image
 import matplotlib.pyplot as plt
 
 
-def plot_images(images: list[Image.Image], size=4, cols: int = None):
+def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str | Path], size=4, cols: int = None):
     """Plot a list of PIL images in a grid
 
     Args:
@@ -11,6 +12,9 @@ def plot_images(images: list[Image.Image], size=4, cols: int = None):
         size (int, optional): the size in inch of the images
         col (int, optional): The number of columns of the grid. Defaults to 1.
     """
+    titles = None
+    if isinstance(images, dict):
+        titles, images = list(images.keys()), list(images.values())
     if not cols:
         cols = min(10, len(images))
     rows = math.ceil(len(images) / cols)
@@ -20,8 +24,10 @@ def plot_images(images: list[Image.Image], size=4, cols: int = None):
     else:
         axes = [axes]
     for i, img in enumerate(images):
+        if not isinstance(img, Image.Image):
+            img = Image.open(img)
         axes[i].imshow(img)
-        axes[i].set_title(f"({img.size[0]}×{img.size[1]})")
+        axes[i].set_title(titles[i] if titles else f"({img.size[0]}×{img.size[1]})")
         axes[i].axis("off")
     plt.tight_layout()
     plt.show()
