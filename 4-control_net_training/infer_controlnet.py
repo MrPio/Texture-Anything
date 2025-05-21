@@ -1,3 +1,9 @@
+"""
+Predict 20 samples from Objaverse dataset. CWD-independent.
+
+Based on: https://github.com/huggingface/diffusers/tree/main/examples/controlnet
+"""
+
 from pathlib import Path
 import sys
 import PIL
@@ -11,32 +17,12 @@ CACHE_DIR = ROOT_PATH / ".huggingface"
 sys.path.insert(0, str(ROOT_PATH))
 from src import *
 
-SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
+# SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
+SD_MODEL = "stabilityai/stable-diffusion-2-1"
 CNET_MODEL = "lllyasviel/sd-controlnet-mlsd"
-OUTPUT_FOLDER = "SD1.5_CNmlsd_vanilla"
-INVERT_UV = False
-
-controlnet = ControlNetModel.from_pretrained(
-    pretrained_model_name_or_path=CNET_MODEL,
-    cache_dir=CACHE_DIR,
-    torch_dtype=torch.float16,
-)
-pipe = StableDiffusionControlNetPipeline.from_pretrained(
-    pretrained_model_name_or_path=SD_MODEL,
-    controlnet=controlnet,
-    torch_dtype=torch.float16,
-    cache_dir=CACHE_DIR,
-)
-
-# speed up diffusion process with faster scheduler and memory optimization
-pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
-# remove following line if xformers is not installed or when using Torch 2.0.
-pipe.enable_xformers_memory_efficient_attention()
-# memory optimization.
-pipe.enable_model_cpu_offload()
-
-dataset = ObjaverseDataset3D()
-uids = [
+OUTPUT_FOLDER = "SD2.1_CNmlsd_vanilla"
+INVERT_UV = True
+UIDS = [
     "3603cf85c49e4323a93b62db0258b36f",
     "2947627cf0ba404e89e7d16d172d4c0e",
     "2b0e069216f046a7a93583660b913644",
@@ -59,17 +45,36 @@ uids = [
     "e1c5e66f5b50407f8d453813a6b81220",
 ]
 
+controlnet = ControlNetModel.from_pretrained(
+    pretrained_model_name_or_path=CNET_MODEL,
+    cache_dir=CACHE_DIR,
+    torch_dtype=torch.float16,
+)
+pipe = StableDiffusionControlNetPipeline.from_pretrained(
+    pretrained_model_name_or_path=SD_MODEL,
+    controlnet=controlnet,
+    torch_dtype=torch.float16,
+    cache_dir=CACHE_DIR,
+)
+
+# speed up diffusion process with faster scheduler and memory optimization
+pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
+# remove following line if xformers is not installed or when using Torch 2.0.
+pipe.enable_xformers_memory_efficient_attention()
+# memory optimization.
+pipe.enable_model_cpu_offload()
+
+dataset = ObjaverseDataset3D()
 uv_paths = {x.stem: x for x in (dataset.DATASET_PATH / "uv").glob("*") if x.suffix in dataset.IMG_EXT}
 captions = dataset.captions
-OUTPUT_PATH = ROOT_PATH / "4-control_net_training" / "infer" / OUTPUT_FOLDER
-OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
+generator = torch.manual_seed(0)
+output_path = ROOT_PATH / "4-control_net_training" / "infer" / OUTPUT_FOLDER
+output_path.mkdir(parents=True, exist_ok=True)
 
-for uid in tqdm(uids):
+for uid in tqdm(UIDS):
     control_image = PIL.Image.open(uv_paths[uid]).convert("RGB")
     if INVERT_UV:
         control_image = PIL.ImageOps.invert(control_image)
     prompt = captions[uid]
-
-    generator = torch.manual_seed(0)
     image = pipe(prompt, num_inference_steps=20, generator=generator, image=control_image).images[0]
-    image.save(ROOT_PATH / "4-control_net_training" / "infer" / OUTPUT_FOLDER / f"{uid}.png")
+    image.save(output_path / f"{uid}.png")
