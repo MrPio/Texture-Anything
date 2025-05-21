@@ -5,6 +5,7 @@
     - [ ] La MSE non deve pesare le zone non mappate
     - [ ] Data Augmentation:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture
     - [ ] Rigenerare le texture/UV di Objaverse con smart
+    - [ ] In infer_controlnet, usa il test set generato in 4.1, in modo da non usare elementi del trainingset
 
 ## DONE
 
