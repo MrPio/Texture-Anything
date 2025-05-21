@@ -4,9 +4,9 @@ ROOT_PATH = Path(__file__).parents[1]
 CACHE_DIR = ROOT_PATH / ".huggingface"
 
 # SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
-SD_MODEL = "stabilityai/stable-diffusion-2-1"
-DREAM_BOOTH = "texture_hell" # Place https://civitai.com/models/43468/texture-hell in CACHE_DIR
-OUTPUT_FOLDER = "SD2.1_vanilla"
+SD_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"
+DREAM_BOOTH = None  # "texture_hell.safetensors" # Place https://civitai.com/models/43468/texture-hell in CACHE_DIR
+OUTPUT_FOLDER = "SDxl_vanilla"
 PROMPTS = [
     "Texture of a rusty barrel",
     "Texture of a brand new dark coocking pan",
@@ -22,19 +22,20 @@ if output_path.exists():
     raise "The output path already exists."
 
 import torch
-from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler, UniPCMultistepScheduler
+from diffusers import StableDiffusionPipeline, DiffusionPipeline, DPMSolverMultistepScheduler, UniPCMultistepScheduler
 from tqdm import tqdm
 
 if DREAM_BOOTH:
     pipe = StableDiffusionPipeline.from_single_file(
-        pretrained_model_link_or_path=str(CACHE_DIR / f"{DREAM_BOOTH}.safetensors"),
+        pretrained_model_link_or_path=str(CACHE_DIR / DREAM_BOOTH),
         torch_dtype=torch.float16,
-        local_files_only=True,
         cache_dir=CACHE_DIR,
+        local_files_only=True,
     )
 else:
+    # use DiffusionPipeline if SDxl
     pipe = StableDiffusionPipeline.from_pretrained(
-        pretrained_model_link_or_path=SD_MODEL,
+        pretrained_model_name_or_path=SD_MODEL,
         torch_dtype=torch.float16,
         cache_dir=CACHE_DIR,
         local_files_only=True,

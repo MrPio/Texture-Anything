@@ -6,21 +6,15 @@ Based on: https://github.com/huggingface/diffusers/tree/main/examples/controlnet
 
 from pathlib import Path
 import sys
-import PIL
-from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, UniPCMultistepScheduler
-import torch
-from numpy import random
-from tqdm import tqdm
 
 ROOT_PATH = Path(__file__).parents[1]
 CACHE_DIR = ROOT_PATH / ".huggingface"
-sys.path.insert(0, str(ROOT_PATH))
-from src import *
 
 # SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
-SD_MODEL = "stabilityai/stable-diffusion-2-1"
+SD_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"
 CNET_MODEL = "lllyasviel/sd-controlnet-mlsd"
-OUTPUT_FOLDER = "SD2.1_CNmlsd_vanilla"
+# LLL_LITE = "controlllite_xl_mlsd_V2.safetensors" Not supported by diffusers
+OUTPUT_FOLDER = "SDxl_CNmlsd_vanilla"
 INVERT_UV = True
 UIDS = [
     "3603cf85c49e4323a93b62db0258b36f",
@@ -44,17 +38,38 @@ UIDS = [
     "16cd7b9ba74f44239d1987cb1546396e",
     "e1c5e66f5b50407f8d453813a6b81220",
 ]
+output_path = ROOT_PATH / "4-control_net_training" / "infer" / OUTPUT_FOLDER
+if output_path.exists():
+    raise "The output path already exists."
+
+import PIL
+from diffusers import (
+    StableDiffusionControlNetPipeline,
+    StableDiffusionXLControlNetPipeline,
+    ControlNetModel,
+    UniPCMultistepScheduler,
+)
+import torch
+from numpy import random
+from tqdm import tqdm
+
+sys.path.insert(0, str(ROOT_PATH))
+from src import *
 
 controlnet = ControlNetModel.from_pretrained(
     pretrained_model_name_or_path=CNET_MODEL,
     cache_dir=CACHE_DIR,
     torch_dtype=torch.float16,
+    local_files_only=True,
 )
-pipe = StableDiffusionControlNetPipeline.from_pretrained(
+pipe = (
+    StableDiffusionXLControlNetPipeline if "xl" in SD_MODEL else StableDiffusionControlNetPipeline
+).from_pretrained(
     pretrained_model_name_or_path=SD_MODEL,
     controlnet=controlnet,
     torch_dtype=torch.float16,
     cache_dir=CACHE_DIR,
+    local_files_only=True,
 )
 
 # speed up diffusion process with faster scheduler and memory optimization
@@ -68,7 +83,6 @@ dataset = ObjaverseDataset3D()
 uv_paths = {x.stem: x for x in (dataset.DATASET_PATH / "uv").glob("*") if x.suffix in dataset.IMG_EXT}
 captions = dataset.captions
 generator = torch.manual_seed(0)
-output_path = ROOT_PATH / "4-control_net_training" / "infer" / OUTPUT_FOLDER
 output_path.mkdir(parents=True, exist_ok=True)
 
 for uid in tqdm(UIDS):
