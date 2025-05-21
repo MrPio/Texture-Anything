@@ -10,11 +10,11 @@ import sys
 ROOT_PATH = Path(__file__).parents[1]
 CACHE_DIR = ROOT_PATH / ".huggingface"
 
-# SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
-SD_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"
-CNET_MODEL = "lllyasviel/sd-controlnet-mlsd"
-# LLL_LITE = "controlllite_xl_mlsd_V2.safetensors" Not supported by diffusers
-OUTPUT_FOLDER = "SDxl_CNmlsd_vanilla"
+SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
+CNET_MODEL = (
+    ROOT_PATH / "4-control_net_training/output/SD1.5_CNmlsd_128bs_5e-6lr_13k/checkpoint-500/controlnet"
+)  # lllyasviel/sd-controlnet-mlsd
+OUTPUT_FOLDER = "SD1.5_CNmlsd_128bs_5e-6lr_13k_500s"
 INVERT_UV = True
 UIDS = [
     "3603cf85c49e4323a93b62db0258b36f",
@@ -50,14 +50,13 @@ from diffusers import (
     UniPCMultistepScheduler,
 )
 import torch
-from numpy import random
 from tqdm import tqdm
 
 sys.path.insert(0, str(ROOT_PATH))
 from src import *
 
 controlnet = ControlNetModel.from_pretrained(
-    pretrained_model_name_or_path=CNET_MODEL,
+    pretrained_model_name_or_path=str(CNET_MODEL),
     cache_dir=CACHE_DIR,
     torch_dtype=torch.float16,
     local_files_only=True,
@@ -70,6 +69,7 @@ pipe = (
     torch_dtype=torch.float16,
     cache_dir=CACHE_DIR,
     local_files_only=True,
+    safety_checker=None,
 )
 
 # speed up diffusion process with faster scheduler and memory optimization

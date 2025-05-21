@@ -15,6 +15,10 @@ def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str 
     titles = None
     if isinstance(images, dict):
         titles, images = list(images.keys()), list(images.values())
+    for i in range(len(images)):
+        if not isinstance(images[i], Image.Image):
+            images[i] = Image.open(images[i])
+
     if not cols:
         cols = min(10, len(images))
     rows = math.ceil(len(images) / cols)
@@ -25,8 +29,6 @@ def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str 
     else:
         axes = [axes]
     for i, img in enumerate(images):
-        if not isinstance(img, Image.Image):
-            img = Image.open(img)
         axes[i].imshow(img)
         axes[i].set_title(titles[i] if titles else f"({img.size[0]}×{img.size[1]})")
         axes[i].axis("off")
