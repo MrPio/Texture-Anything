@@ -4,7 +4,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 
-def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str | Path], size=4, cols: int = None):
+def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str | Path], size=3, cols: int = None):
     """Plot a list of PIL images in a grid
 
     Args:
@@ -18,7 +18,8 @@ def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str 
     if not cols:
         cols = min(10, len(images))
     rows = math.ceil(len(images) / cols)
-    _, axes = plt.subplots(rows, cols, figsize=(cols * size, rows * size))
+    max_ratio = max(image.size[0] / image.size[1] for image in images)
+    _, axes = plt.subplots(rows, cols, figsize=(cols * size, int(rows * size / max_ratio)))
     if rows > 1 or cols > 1:
         axes = axes.flatten()
     else:

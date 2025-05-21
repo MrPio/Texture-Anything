@@ -4,13 +4,13 @@
 
     - [ ] La MSE non deve pesare le zone non mappate
     - [ ] Data Augmentation:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture
-    - [ ] Fare script di inferenza di CNET
-    - [ ] Provare 2.1 con dreambooth texture hell
     - [ ] Rigenerare le texture/UV di Objaverse con smart
-    - [ ] Invertire le UV
 
 ## DONE
 
+    - [x] Provare 2.1 con dreambooth texture hell
+    - [x] Fare script di inferenza di CNET
+    - [x] Invertire le UV
     - [x] Add 3.1 in download method of ShapeNetCoreDataset3D
     - [x] Generate the rendering of objects
     - [x] Define a UV map scoring function

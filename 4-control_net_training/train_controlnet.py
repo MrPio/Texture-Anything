@@ -23,6 +23,7 @@ import random
 import shutil
 from pathlib import Path
 
+import PIL
 import accelerate
 import numpy as np
 import torch
@@ -137,6 +138,8 @@ def log_validation(
 
     for validation_prompt, validation_image in zip(validation_prompts, validation_images):
         validation_image = Image.open(validation_image).convert("RGB")
+        if args.invert_conditioning_image:
+            validation_image = PIL.ImageOps.invert(validation_image)
 
         images = []
 
@@ -501,6 +504,11 @@ def parse_args(input_args=None):
         help="The column of the dataset containing the controlnet conditioning image.",
     )
     parser.add_argument(
+        "--invert_conditioning_image",
+        action="store_true",
+        help="Whether to invert the color of the condition image. Useful when control images are UV maps and the CNet is loaded from a pretrained mlsd checkpoint.",
+    )
+    parser.add_argument(
         "--caption_column",
         type=str,
         default="text",
@@ -706,6 +714,8 @@ def make_train_dataset(args, tokenizer, accelerator):
         images = [image_transforms(image) for image in images]
 
         conditioning_images = [image.convert("RGB") for image in examples[conditioning_image_column]]
+        if args.invert_conditioning_image:
+            conditioning_images = [PIL.ImageOps.invert(image) for image in conditioning_images]
         conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
 
         examples["pixel_values"] = images
