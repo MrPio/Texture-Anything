@@ -141,9 +141,18 @@ class Object3D(abc.ABC):
         images_pil = self.textures
         plot_images(images_pil, cols=min(4, len(images_pil)))
 
-    def draw_uv_map(self, size=1024, stroke=1) -> Image.Image:
-        assert self.has_one_mesh
+    def draw_uv_map(self, size=1024, stroke=1, fill=False) -> Image.Image:
+        """Draw the UV map of the object.
 
+        Args:
+            size (int, optional): The size of the generate image. Defaults to 1024.
+            stroke (int, optional): The width of the edges stroke. Defaults to 1.
+            fill: Wheter to fill the non mapped zones with black. Defaults to `False`.
+
+        Returns:
+            Image.Image: The drawing of the UV map
+        """
+        assert self.has_one_mesh
         bm = bmesh.new()
         bm.from_mesh(self.mesh.data)
         uv_layer = bm.loops.layers.uv.active
@@ -163,7 +172,10 @@ class Object3D(abc.ABC):
             points = [(int(uv.x * size), int(uv.y * size)) for uv in uv_coords]
             # Close the loop
             points.append(points[0])
-            draw.line(points, fill=(0, 0, 0, 255), width=stroke)
+            if fill:
+                draw.polygon(points, fill=(0, 0, 0, 255))
+            else:
+                draw.line(points, fill=(0, 0, 0, 255), width=stroke)
 
         return img
 
