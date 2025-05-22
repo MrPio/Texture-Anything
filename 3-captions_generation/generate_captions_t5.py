@@ -28,8 +28,8 @@ from PIL import Image
 from mpi4py import MPI
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
 
-ROOT_PATH = Path(__file__).resolve().parents[1]
-CACHE_PATH = ROOT_PATH / ".huggingface"
+ROOT_DIR = Path(__file__).resolve().parents[1]
+CACHE_PATH = ROOT_DIR / ".huggingface"
 
 comm = MPI.COMM_WORLD
 rank, size = comm.Get_rank(), comm.Get_size()
@@ -44,7 +44,7 @@ def parse_args():
 
 
 args = parse_args()
-paths = sorted(p for p in (ROOT_PATH / args.input).glob("*") if p.suffix in {".jpg", ".png"})[rank::size]
+paths = sorted(p for p in (ROOT_DIR / args.input).glob("*") if p.suffix in {".jpg", ".png"})[rank::size]
 if args.demo:
     paths = paths[:9]
 
@@ -111,5 +111,5 @@ for p in tqdm(paths) if rank == 0 else paths:
 all_captions = comm.gather(captions, root=0)
 if rank == 0 and not args.demo:
     all_captions = {k: v for d in all_captions for k, v in d.items()}
-    with open(ROOT_PATH / args.output, "w") as f:
+    with open(ROOT_DIR / args.output, "w") as f:
         json.dump(all_captions, f, indent=4)

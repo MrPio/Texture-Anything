@@ -173,7 +173,7 @@ class Object3D(abc.ABC):
             # Close the loop
             points.append(points[0])
             if fill:
-                draw.polygon(points, fill=(0, 0, 0, 255))
+                draw.polygon(points, fill=(0, 0, 0, 255), width=stroke)
             else:
                 draw.line(points, fill=(0, 0, 0, 255), width=stroke)
 

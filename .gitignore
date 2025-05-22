@@ -22,5 +22,5 @@ dataset/shapenetcore/uv/**
 dataset/shapenetcore/render/**
 
 4-control_net_training/dataset/
-4-control_net_training/output/
+4-control_net_training/trainings/
 controlnet_sd15.log

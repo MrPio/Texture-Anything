@@ -30,8 +30,8 @@ from transformers import AutoProcessor
 from mpi4py import MPI
 import sys
 
-ROOT_PATH = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT_PATH))
+ROOT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT_DIR))
 from src import *
 
 
@@ -45,15 +45,15 @@ def parse_args():
 
 args = parse_args()
 
-CACHE_PATH = ROOT_PATH / ".huggingface"
-OUTPUT_PATH = ROOT_PATH / args.output
+CACHE_PATH = ROOT_DIR / ".huggingface"
+OUTPUT_PATH = ROOT_DIR / args.output
 
 comm = MPI.COMM_WORLD
 rank, size = comm.Get_rank(), comm.Get_size()
 
 captions = json.load(open(OUTPUT_PATH)) if OUTPUT_PATH.exists() else {}
 paths = sorted(
-    p for p in (ROOT_PATH / args.input).glob("*") if p.suffix in {".jpg", ".png"} and p.stem not in captions
+    p for p in (ROOT_DIR / args.input).glob("*") if p.suffix in {".jpg", ".png"} and p.stem not in captions
 )[rank::size]
 if args.demo:
     paths = paths[:4]

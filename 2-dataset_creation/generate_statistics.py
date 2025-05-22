@@ -19,8 +19,8 @@ import warnings
 import pandas as pd
 from tqdm import tqdm
 
-ROOT_PATH = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT_PATH))
+ROOT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT_DIR))
 from src import *
 from mpi4py import MPI
 

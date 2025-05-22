@@ -7,8 +7,8 @@ from pathlib import Path
 from vllm import LLM
 from vllm.sampling_params import SamplingParams
 
-ROOT_PATH = Path(__file__).resolve().parents[1]
-CACHE_PATH = ROOT_PATH / ".huggingface"
+ROOT_DIR = Path(__file__).resolve().parents[1]
+CACHE_PATH = ROOT_DIR / ".huggingface"
 
 SYSTEM_PROMPT = "You are a conversational agent that always answers straight to the point, always end your accurate response with an ASCII drawing of a cat."
 

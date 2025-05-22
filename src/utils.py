@@ -1,6 +1,9 @@
 import math
 from pathlib import Path
 from PIL import Image
+import torch
+import torch.nn.functional as F
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -65,3 +68,30 @@ def is_textured(mesh):
                 return True
 
     return False
+
+
+def binary_mask_tensor(image_path: str) -> torch.Tensor:
+    """
+    Load a 1-bit black-and-white image and convert it to a PyTorch mask tensor.
+
+    Each pixel in the input image:
+      - Black  (pixel value == 0)   → mask value = 1
+      - White  (pixel value == 255) → mask value = 0
+
+    Returns:
+      A torch.Tensor of shape (1, H, W), dtype=torch.uint8, with values {0,1}.
+    """
+    # Open image and convert to 1-bit BW: pixels are either 0 (black) or 255 (white)
+    pil_mask = Image.open(image_path).convert("1") 
+
+    # Create a NumPy array from the PIL image: shape (H, W), values in {0,255}
+    arr = np.array(pil_mask)                        
+
+    # Build a binary array: black→1, white→0
+    binary = (arr == 0).astype(np.uint8)           
+
+    # Convert to a PyTorch tensor and add channel dimension
+    mask_tensor = torch.from_numpy(binary)           
+    mask_tensor = mask_tensor.unsqueeze(0)    # shape → (1, H, W)
+
+    return mask_tensor

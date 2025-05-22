@@ -4,9 +4,9 @@ from pathlib import Path
 from diffusers import StableDiffusionPipeline
 from diffusers import ControlNetModel
 
-ROOT_PATH = Path(__file__).parents[1]
-DOWNLOAD_PATH = ROOT_PATH / ".huggingface"
-sys.path.insert(0, str(ROOT_PATH))
+ROOT_DIR = Path(__file__).parents[1]
+DOWNLOAD_PATH = ROOT_DIR / ".huggingface"
+sys.path.insert(0, str(ROOT_DIR))
 from src import log
 
 # SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"

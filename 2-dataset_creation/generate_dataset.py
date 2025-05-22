@@ -17,8 +17,8 @@ import PIL.Image as PILImage
 import requests
 from pathlib import Path
 
-ROOT_PATH = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT_PATH))
+ROOT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT_DIR))
 from src import *
 from mpi4py import MPI
 import argparse
@@ -57,14 +57,17 @@ if args.computation_node:
             continue
 
         uv_map = obj.draw_uv_map()
-
+        
         # Skip if UV is too sparse
         if compute_image_density(uv_map) < MIN_UV_DENSITY:
             continue
 
+        control_uv_map = obj.draw_uv_map(fill=True)
+
         # Commit
         diffuse.save(dataset_path / "diffuse" / f"{uid}.png")
         uv_map.save(dataset_path / "uv" / f"{uid}.png")
+        control_uv_map.save(dataset_path / "control" / f"{uid}.png")
 else:
 
     def download_thumbnail(uid):

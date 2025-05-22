@@ -5,12 +5,12 @@
 #SBATCH --time=16:00:00
 #SBATCH --partition=boost_usr_prod
 ##SBATCH --qos=boost_qos_dbg                  # Refer to https://wiki.u-gov.it/confluence/display/SCAIUS/Booster+Section
-#SBATCH --gres=gpu:4
-#SBATCH --mem=64G
+#SBATCH --gres=gpu:2
+#SBATCH --mem=52G
 
 export SD_MODEL="stable-diffusion-v1-5/stable-diffusion-v1-5"
 export CNET_MODEL="lllyasviel/sd-controlnet-mlsd"
-export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/output/SD1.5_CNmlsd_128bs_5e-6lr_13k"
+export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/trainings/SD1.5_CNmlsd_128bs_5e-6lr_13k"
 export CACHE_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/.huggingface"
 export DATASET_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/dataset"
 

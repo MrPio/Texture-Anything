@@ -1,7 +1,7 @@
 from pathlib import Path
 
-ROOT_PATH = Path(__file__).parents[1]
-CACHE_DIR = ROOT_PATH / ".huggingface"
+ROOT_DIR = Path(__file__).parents[1]
+CACHE_DIR = ROOT_DIR / ".huggingface"
 
 # SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
 SD_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"
@@ -17,7 +17,7 @@ PROMPTS = [
     "texture, rock, cave, uneven, weathered, rough, moss",
     "texture, cobblestone, mud, old, uneven, ground, outdoors",
 ]
-output_path = ROOT_PATH / "4-control_net_training" / "infer" / OUTPUT_FOLDER
+output_path = ROOT_DIR / "4-control_net_training" / "tests" / OUTPUT_FOLDER
 if output_path.exists():
     raise "The output path already exists."
 
