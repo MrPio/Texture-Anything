@@ -12,7 +12,7 @@ class Dataset3D(abc.ABC):
     """Represents a dataset of 3D objects."""
 
     DATASET_PATH = Path(__file__).resolve().parents[2] / "dataset"
-    DATASET_SUBFOLDERS = ["uv", "render", "diffuse", "objects"]
+    DATASET_SUBFOLDERS = ["uv", "mask", "render", "diffuse", "objects"]
     IMG_EXT = [".jpg", ".JPG", ".jpeg", ".JPEG", ".png", ".PNG"]
 
     def __init__(self, dataset_folder: str, object_class: type[Object3D]):
@@ -40,7 +40,7 @@ class Dataset3D(abc.ABC):
         if not p.exists():
             return None
         df = pd.read_parquet(p)
-        df["valid"] = (df["diffuseCount"] == 1) & (df["uvScore"] > 0.66)
+        df["valid"] = (df["diffuseCount"] == 1) & (df["uvCount"] == 1) & (df["uvScore"] > 0.66)
         return df
 
     @cached_property

@@ -1,12 +1,14 @@
 from functools import cached_property
 from pathlib import Path
 
+from matplotlib.pyplot import spy
 import requests
 
 import PIL
 from .object3d import Object3D
 import numpy as np
 from PIL import Image
+import bpy
 
 
 class ObjaverseObject3D(Object3D):
@@ -15,6 +17,13 @@ class ObjaverseObject3D(Object3D):
 
         super(ObjaverseObject3D, self).__init__(uid, path)
         self.dataset = ObjaverseDataset3D()
+
+        for mesh in self.objects:
+            if mesh != self.mesh:
+                bpy.data.objects.remove(mesh, do_unlink=True)
+        self.objects = [self.mesh]
+        self.meshes = [self.mesh]
+        self.has_one_mesh = True
 
     @property
     def textures(self) -> list[Image.Image]:

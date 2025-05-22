@@ -15,11 +15,14 @@ dataset/objaverse/1-annotations_filtered.parquet
 dataset/objaverse/objects/**
 dataset/objaverse/diffuse/**
 dataset/objaverse/uv/**
+dataset/objaverse/mask/**
+dataset/objaverse_bkp/
 dataset/objaverse/render/**
 dataset/shapenetcore/objects/**
 dataset/shapenetcore/diffuse/**
 dataset/shapenetcore/uv/**
 dataset/shapenetcore/render/**
+dataset/shapenetcore/mask/**
 
 4-control_net_training/dataset/
 4-control_net_training/trainings/

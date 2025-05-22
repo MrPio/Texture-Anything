@@ -19,14 +19,14 @@ def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str 
     if isinstance(images, dict):
         titles, images = list(images.keys()), list(images.values())
     for i in range(len(images)):
-        if type(images[i]) not in [Image.Image, np.ndarray]:
+        if not isinstance(images[i], (Image.Image, np.ndarray)):
             images[i] = Image.open(images[i])
 
     if not cols:
         cols = min(10, len(images))
     rows = math.ceil(len(images) / cols)
     max_ratio = max(
-        (image.size[0] / image.size[1] if type(image) == Image.Image else image.shape[0] / image.shape[1])
+        (image.size[0] / image.size[1] if isinstance(image, (Image.Image)) else image.shape[0] / image.shape[1])
         for image in images
     )
     _, axes = plt.subplots(rows, cols, figsize=(cols * size, int(rows * size / max_ratio)))

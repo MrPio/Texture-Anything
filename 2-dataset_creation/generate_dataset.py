@@ -3,7 +3,8 @@ Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse text
 This script is CWD-independent
 
 Usage:
-    $ srun -n 2 --ntasks-per-node=4 --mem=24G --gpus-per-task=0 --partition=boost_usr_prod --qos=boost_qos_dbg python generate_dataset.py --computation-node
+    $ srun -n 24 --mem=10G --gpus-per-task=0 --partition=boost_usr_prod \
+        python generate_dataset.py --computation-node
 
 Author:
     Valerio Morelli - 2025-05-08
@@ -11,6 +12,7 @@ Author:
 
 from io import BytesIO
 import multiprocessing
+import numpy as np
 from tqdm import tqdm
 import sys
 import PIL.Image as PILImage
@@ -28,46 +30,48 @@ MIN_UV_DENSITY = 0.0085
 MIN_RENDER_MEGAPIXEL = 200_000
 comm = MPI.COMM_WORLD
 rank, size = comm.Get_rank(), comm.Get_size()
+cprint("Rank:", rank, "Size:", size)
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--computation-node",
-    action="store_true",
-    help="Whether to focus on thumbnail download or UV and diffusion extraction.",
-)
-parser.add_argument("--dataset", type=str, default="objaverse")
-args = parser.parse_args()
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--computation-node",
+        action="store_true",
+        help="Whether to focus on thumbnail download or UV and diffusion extraction.",
+    )
+    parser.add_argument("--dataset", type=str, default="objaverse")
+    parser.add_argument("--force", action="store_true")
+    return parser.parse_args()
+
+
+args = parse_args()
 
 dataset = datasets[args.dataset]()
 dataset_path = dataset.DATASET_PATH
-already_processed_uids = [
-    x.stem for x in (dataset_path / "uv" if args.computation_node else "render").glob("*") if x.is_file()
-]
-print(f"Already processed {len(already_processed_uids)} objects")
+if not args.force:
+    already_processed_uids = [
+        x.stem for x in (dataset_path / "uv" if args.computation_node else "render").glob("*") if x.is_file()
+    ]
+    print(f"Already processed {len(already_processed_uids)} objects")
+else:
+    already_processed_uids = []
 
 uids = dataset.statistics[dataset.statistics["valid"]].index[rank::size]
 uids = [x for x in uids if x not in already_processed_uids]
 if args.computation_node:
-    for uid in tqdm(uids) if rank == 0 else uids:
+    for uid in tqdm(uids, disable=rank != 0):
         obj = dataset[uid]
-        diffuse = obj.textures[0]
-
-        # Skip if texture is not square
-        if diffuse.size[0] != diffuse.size[1]:
-            continue
-
-        uv_map = obj.draw_uv_map()
-        
-        # Skip if UV is too sparse
-        if compute_image_density(uv_map) < MIN_UV_DENSITY:
-            continue
-
-        control_uv_map = obj.draw_uv_map(fill=True)
+        diffuse, uv_map = obj.regenerate_uv_map(
+            samples=14, bake_type="GLOSSY" if args.dataset == "shapenetcore" else "DIFFUSE"
+        )
+        uv_filled = obj.draw_uv_map(fill=True)
+        mask = np.all(np.array(uv_filled) == [0, 0, 0, 255], axis=2)
 
         # Commit
         diffuse.save(dataset_path / "diffuse" / f"{uid}.png")
         uv_map.save(dataset_path / "uv" / f"{uid}.png")
-        control_uv_map.save(dataset_path / "control" / f"{uid}.png")
+        np.save(dataset_path / "mask" / f"{uid}.npy", np.packbits(mask))
 else:
 
     def download_thumbnail(uid):

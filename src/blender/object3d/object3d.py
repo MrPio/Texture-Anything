@@ -5,7 +5,7 @@ import io
 import os
 from pathlib import Path
 import tempfile
-from typing import Optional
+from typing import Literal, Optional
 
 from tqdm import tqdm
 import numpy as np
@@ -179,7 +179,9 @@ class Object3D(abc.ABC):
 
         return img
 
-    def regenerate_uv_map(self, island_margin=0, size=512, samples=8) -> tuple[Image.Image, Image.Image]:
+    def regenerate_uv_map(
+        self, island_margin=0, size=512, samples=8, bake_type: Literal["DIFFUSE", "GLOSSY"] = "DIFFUSE"
+    ) -> tuple[Image.Image, Image.Image]:
         """Regenerate a new UV map and Bake the diffuse texture accordingly.
 
         Returns:
@@ -188,10 +190,10 @@ class Object3D(abc.ABC):
         assert self.has_one_mesh
 
         # Switch to Object mode
-        bpy.ops.object.mode_set(mode="OBJECT")
-        mesh = self.mesh.data
         self.mesh.select_set(True)
         bpy.context.view_layer.objects.active = self.mesh
+        bpy.ops.object.mode_set(mode="OBJECT")
+        mesh = self.mesh.data
 
         # 1. Duplicate the existing UV map
         mesh.uv_layers.new(name="SmartUV")
@@ -219,7 +221,8 @@ class Object3D(abc.ABC):
         load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=1.5)
         bpy.context.scene.render.engine = "CYCLES"
         bpy.context.scene.cycles.samples = samples
-        bpy.ops.object.bake(type="GLOSSY")
+        self.mesh.select_set(True)
+        bpy.ops.object.bake(type=bake_type)
 
         # 6. Convert to PIL
         pixels = (np.array(img.pixels) * 255).astype(np.uint8)
