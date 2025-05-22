@@ -19,13 +19,16 @@ def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str 
     if isinstance(images, dict):
         titles, images = list(images.keys()), list(images.values())
     for i in range(len(images)):
-        if not isinstance(images[i], Image.Image):
+        if type(images[i]) not in [Image.Image, np.ndarray]:
             images[i] = Image.open(images[i])
 
     if not cols:
         cols = min(10, len(images))
     rows = math.ceil(len(images) / cols)
-    max_ratio = max(image.size[0] / image.size[1] for image in images)
+    max_ratio = max(
+        (image.size[0] / image.size[1] if type(image) == Image.Image else image.shape[0] / image.shape[1])
+        for image in images
+    )
     _, axes = plt.subplots(rows, cols, figsize=(cols * size, int(rows * size / max_ratio)))
     if rows > 1 or cols > 1:
         axes = axes.flatten()
@@ -33,7 +36,8 @@ def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str 
         axes = [axes]
     for i, img in enumerate(images):
         axes[i].imshow(img)
-        axes[i].set_title(titles[i] if titles else f"({img.size[0]}×{img.size[1]})")
+        if titles:
+            axes[i].set_title(titles[i])
         axes[i].axis("off")
     plt.tight_layout()
     plt.show()
@@ -82,16 +86,16 @@ def binary_mask_tensor(image_path: str) -> torch.Tensor:
       A torch.Tensor of shape (1, H, W), dtype=torch.uint8, with values {0,1}.
     """
     # Open image and convert to 1-bit BW: pixels are either 0 (black) or 255 (white)
-    pil_mask = Image.open(image_path).convert("1") 
+    pil_mask = Image.open(image_path).convert("1")
 
     # Create a NumPy array from the PIL image: shape (H, W), values in {0,255}
-    arr = np.array(pil_mask)                        
+    arr = np.array(pil_mask)
 
     # Build a binary array: black→1, white→0
-    binary = (arr == 0).astype(np.uint8)           
+    binary = (arr == 0).astype(np.uint8)
 
     # Convert to a PyTorch tensor and add channel dimension
-    mask_tensor = torch.from_numpy(binary)           
-    mask_tensor = mask_tensor.unsqueeze(0)    # shape → (1, H, W)
+    mask_tensor = torch.from_numpy(binary)
+    mask_tensor = mask_tensor.unsqueeze(0)  # shape → (1, H, W)
 
     return mask_tensor

@@ -78,7 +78,7 @@ def masked_mse_loss(pred, targ, mask):
     loss_elems = (F.mse_loss(pred, targ, reduction='none'))* mask
 
     # Sum and avarege on the actve parts (avoid zero division)
-    return loss_elems.sum() / (mask.sum() + 1e-8) 
+    return loss_elems.sum() / (mask.sum() + 1e-6) 
 
 #=================================================================================
 
@@ -1153,6 +1153,7 @@ def main(args):
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
                 loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                # loss = masked_mse_loss(model_pred.float(), target.float(), mask) # +
 
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
