@@ -2,13 +2,13 @@
 
 ## TODO
 
-    - [ ] La MSE non deve pesare le zone non mappate
     - [ ] Data Augmentation:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture
-    - [ ] Rigenerare le texture/UV di Objaverse con smart
-    - [ ] In infer_controlnet, usa il test set generato in 4.1, in modo da non usare elementi del trainingset
+    - [-] Rigenerare le texture/UV di Objaverse con smart
+    - [-] La MSE non deve pesare le zone non mappate: EDIT: non è possibile farlo. Però possiamo rndere nere le zone non mappate
 
 ## DONE
 
+    - [x] In infer_controlnet, usa il test set generato in 4.1, in modo da non usare elementi del trainset
     - [x] Provare 2.1 con dreambooth texture hell
     - [x] Fare script di inferenza di CNET
     - [x] Invertire le UV

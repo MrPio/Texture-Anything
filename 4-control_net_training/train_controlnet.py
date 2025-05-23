@@ -67,20 +67,6 @@ check_min_version("0.34.0.dev0")
 
 logger = get_logger(__name__)
 
-#=================================================================================
-
-def masked_mse_loss(pred, targ, mask):
-    """
-    pred, targ: [B, C, H, W]
-    mask:       [B, 1, H, W] o [B, C, H, W] with {0,1} values
-    """
-    # MSE without reduction (loss per element) and pick only the ones parts
-    loss_elems = (F.mse_loss(pred, targ, reduction='none'))* mask
-
-    # Sum and avarege on the actve parts (avoid zero division)
-    return loss_elems.sum() / (mask.sum() + 1e-6) 
-
-#=================================================================================
 
 def image_grid(imgs, rows, cols):
     assert len(imgs) == rows * cols
@@ -516,6 +502,7 @@ def parse_args(input_args=None):
         default="conditioning_image",
         help="The column of the dataset containing the controlnet conditioning image.",
     )
+    # Added by us:
     parser.add_argument(
         "--invert_conditioning_image",
         action="store_true",
@@ -1153,7 +1140,7 @@ def main(args):
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
                 loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
-                # loss = masked_mse_loss(model_pred.float(), target.float(), mask) # +
+                loss = masked_mse_loss(model_pred.float(), target.float(), mask)  # +
 
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
