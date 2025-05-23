@@ -61,7 +61,7 @@ cd mpi4py-4.0.3
 # ...set MPI compiler explicitly, build and install manually
 export MPICC=$(which mpicc)
 python setup.py build
-python setup.py install --user
+python setup.py install --user # optional --user flag
 
 # Check installation with
 find ~/.local/lib -name "mpi4py"

@@ -87,12 +87,14 @@ class ShapeNetCoreDataset3D(Dataset3D):
             for m in p.iterdir()
         }
 
-    def download(self, first=-1, fresh=False) -> None:
+    def download(self, first=-1, subset=None, fresh=False, silent=False) -> None:
         """Download the ShapeNetCore dataset
 
         Args:
             first (int): Number of categories to process (use -1 for all).
+            subset (list[int]): The list of categories to consider (optional).
             fresh (bool): Wheter to re-download any existent category.
+            fresh (bool): Wheter to suppress any log.
         """
         chunk_size = 16_384
         base_url = "https://huggingface.co/datasets/ShapeNet/ShapeNetCore/resolve/main/"
@@ -101,6 +103,8 @@ class ShapeNetCoreDataset3D(Dataset3D):
         already_downloaded = list(f.stem for f in objects_path.glob("*") if f.is_dir())
 
         selected_cats = self.CATEGORIES[::-1]
+        if subset:
+            selected_cats = [selected_cats[i] for i in subset if i < len(selected_cats)]
         if first > 0:
             selected_cats = selected_cats[:first]
 
@@ -112,7 +116,8 @@ class ShapeNetCoreDataset3D(Dataset3D):
                 else:
                     print(f"Skipping category {cat} because already downloaded.")
                     continue
-            print(i, "/", len(self.CATEGORIES))
+            if not silent:
+                print(i, "/", len(self.CATEGORIES))
             response = requests.get(f"{base_url}{cat}.zip", headers=headers, stream=True)
             zip_path = objects_path / f"{cat}.zip"
             total_size = int(response.headers.get("content-length", 0))
@@ -123,6 +128,7 @@ class ShapeNetCoreDataset3D(Dataset3D):
                 unit="B",
                 unit_scale=True,
                 unit_divisor=1024,
+                disable=silent,
             ) as pbar:
                 for chunk in response.iter_content(chunk_size=chunk_size):
                     if chunk:
@@ -134,10 +140,20 @@ class ShapeNetCoreDataset3D(Dataset3D):
             zip_path.unlink()
 
             # Remove unnecessary surfice and volume voxel files
-            for binvox in tqdm(objects_path.rglob("*.binvox"), leave=False, desc="Removing binvox files"):
-                binvox.unlink()
+            for binvox in tqdm(
+                list((objects_path / cat).rglob("*.binvox")),
+                leave=False,
+                desc="Removing binvox files",
+                disable=silent,
+            ):
+                binvox.unlink(missing_ok=True)
 
             # Convert OBJ to GLB for better compatibility with blender
-            for obj in tqdm(list(objects_path.rglob("*.obj")), leave=False, desc="Converting OBJ to GLB"):
+            for obj in tqdm(
+                list((objects_path / cat).rglob("*.obj")),
+                leave=False,
+                desc="Converting OBJ to GLB",
+                disable=silent,
+            ):
                 trimesh.load(obj).export(str(obj).replace(".obj", ".glb"), file_type="glb")
                 # obj.unlink()
