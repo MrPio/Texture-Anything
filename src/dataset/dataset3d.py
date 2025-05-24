@@ -55,7 +55,8 @@ class Dataset3D(abc.ABC):
         captions = {x.stem for x in (self.DATASET_DIR / "render").glob("*") if x.suffix in Dataset3D.IMG_EXT}
         uvs = {x.stem for x in (self.DATASET_DIR / "uv").glob("*") if x.suffix in Dataset3D.IMG_EXT}
         diffuses = {x.stem for x in (self.DATASET_DIR / "diffuse").glob("*") if x.suffix in Dataset3D.IMG_EXT}
-        return captions.intersection(uvs, diffuses)
+        masks = {x.stem for x in (self.DATASET_DIR / "mask").glob("*.npy")}
+        return captions.intersection(uvs, diffuses, masks)
 
     def __getitem__(self, args: dict | str) -> Object3D | None:
         """Get a Object3D with the given UID

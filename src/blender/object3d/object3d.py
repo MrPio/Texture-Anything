@@ -194,6 +194,7 @@ class Object3D(abc.ABC):
             tuple[Image.Image, Image.Image]: The new texture and the drawing of the new UV map.
         """
         assert self.has_one_mesh
+        print(bake_type)
 
         # Switch to Object mode
         mesh = self.mesh.data
