@@ -14,7 +14,9 @@ dataset/objaverse/0-annotations.pkl
 dataset/objaverse/1-annotations_filtered.parquet
 dataset/objaverse/objects/**
 dataset/objaverse/diffuse/**
+dataset/objaverse/diffuse2/**
 dataset/objaverse/uv/**
+dataset/objaverse/uv2/**
 dataset/objaverse/mask/**
 dataset/objaverse_bkp/
 dataset/objaverse/render/**

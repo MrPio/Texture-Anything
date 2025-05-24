@@ -55,11 +55,19 @@ class Dataset3D(abc.ABC):
         diffuses = {x.stem for x in (self.DATASET_PATH / "diffuse").glob("*") if x.suffix in Dataset3D.IMG_EXT}
         return captions.intersection(uvs, diffuses)
 
-    def __getitem__(self, key) -> Object3D | None:
+    def __getitem__(self, args: dict) -> Object3D | None:
+        """Get a Object3D with the given UID
+
+        Args:
+            args (dict): Must contain at least the `uid` key. Might contain additional arguments for the constructor of the instance of Object3D returned.
+        """
+        uid = args.pop("uid")
+        silent = args.pop("silent", False)
         try:
-            return self.object_class(key, self.paths[key])
+            return self.object_class(uid, self.paths[uid], **args)
         except Exception as e:
-            print(e)
+            if not silent:
+                print(e)
             return None
 
     def download(self) -> None:

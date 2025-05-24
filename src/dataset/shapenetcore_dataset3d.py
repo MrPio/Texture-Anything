@@ -87,14 +87,15 @@ class ShapeNetCoreDataset3D(Dataset3D):
             for m in p.iterdir()
         }
 
-    def download(self, first=-1, subset=None, fresh=False, silent=False) -> None:
+    def download(self, first=-1, subset=None, fresh=False, silent=False, convert_to_glb=False) -> None:
         """Download the ShapeNetCore dataset
 
         Args:
             first (int): Number of categories to process (use -1 for all).
             subset (list[int]): The list of categories to consider (optional).
             fresh (bool): Wheter to re-download any existent category.
-            fresh (bool): Wheter to suppress any log.
+            silent (bool): Wheter to suppress any log.
+            convert_to_glb (bool): Wheter to use trimesh to convert the .obj files.
         """
         chunk_size = 16_384
         base_url = "https://huggingface.co/datasets/ShapeNet/ShapeNetCore/resolve/main/"
@@ -149,11 +150,12 @@ class ShapeNetCoreDataset3D(Dataset3D):
                 binvox.unlink(missing_ok=True)
 
             # Convert OBJ to GLB for better compatibility with blender
-            for obj in tqdm(
-                list((objects_path / cat).rglob("*.obj")),
-                leave=False,
-                desc="Converting OBJ to GLB",
-                disable=silent,
-            ):
-                trimesh.load(obj).export(str(obj).replace(".obj", ".glb"), file_type="glb")
-                # obj.unlink()
+            if convert_to_glb:
+                for obj in tqdm(
+                    list((objects_path / cat).rglob("*.obj")),
+                    leave=False,
+                    desc="Converting OBJ to GLB",
+                    disable=silent,
+                ):
+                    trimesh.load(obj).export(str(obj).replace(".obj", ".glb"), file_type="glb")
+                    # obj.unlink()

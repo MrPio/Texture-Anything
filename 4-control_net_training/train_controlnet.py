@@ -1140,7 +1140,7 @@ def main(args):
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
                 loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
-                loss = masked_mse_loss(model_pred.float(), target.float(), mask)  # +
+                # loss = masked_mse_loss(model_pred.float(), target.float(), mask)  # +
 
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:

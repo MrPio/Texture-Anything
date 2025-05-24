@@ -34,7 +34,10 @@ parser.add_argument("-d", "--demo", action="store_true")
 parser.add_argument("--dataset", type=str, default="objaverse")
 args = parser.parse_args()
 
+OBJECT_ARGS = {"shapenetcore": dict(type="obj")}
+obj_args = OBJECT_ARGS.pop(args.dataset, {})
 dataset = datasets[args.dataset]()
+
 statistics = (
     dataset.statistics.drop(columns=["valid"])
     if dataset.statistics is not None and not args.demo
@@ -56,7 +59,6 @@ paths = comm.bcast(
     root=0,
 )[rank::size]
 
-
 if args.demo:
     paths = paths[:4]
 if rank == 0:
@@ -64,14 +66,14 @@ if rank == 0:
     log("Each task has to process", len(paths) - len(statistics) // size, "objects")
 
 for uid, path in tqdm(paths) if rank == 0 else paths:
-    if (obj := dataset[uid]) is not None:
+    if (obj := dataset[dict(uid=uid, silent=True, **obj_args)]) is not None:
         statistics.loc[uid] = [
             len(obj.meshes),
             obj.mesh_stats["uv_count"] if obj.has_one_mesh else None,
             obj.mesh_stats["texture_count"] if obj.has_one_mesh else None,
             obj.uv_score if obj.has_one_mesh else None,
         ]
-# Syncronize the partial results to the root task
+# Synchronize the partial results to the root task
 log("Rank", rank, "has done processing statistics.")
 all_statistics: list[pd.DataFrame] = comm.gather(statistics, root=0)
 if rank == 0:

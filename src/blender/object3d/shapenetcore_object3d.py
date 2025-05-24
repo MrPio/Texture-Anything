@@ -11,7 +11,7 @@ import bpy
 
 
 class ShapeNetCoreObject3D(Object3D):
-    def __init__(self, uid: str, path: str | Path, type="glb"):
+    def __init__(self, uid: str, path: str | Path, type="glb", merge_vertices=True):
         super(ShapeNetCoreObject3D, self).__init__(uid, Path(path, "models", f"model_normalized.{type}"))
         if type == "glb":
             # Remove the parent axis object
@@ -23,11 +23,12 @@ class ShapeNetCoreObject3D(Object3D):
                 if is_textured(mesh):
                     meshes.append(mesh)
                     # Remove collapsed vertices
-                    bpy.context.view_layer.objects.active = mesh
-                    bpy.ops.object.mode_set(mode="EDIT")
-                    bpy.ops.mesh.select_all(action="SELECT")
-                    bpy.ops.mesh.remove_doubles(threshold=0.00005)
-                    bpy.ops.object.mode_set(mode="OBJECT")
+                    if merge_vertices:
+                        bpy.context.view_layer.objects.active = mesh
+                        bpy.ops.object.mode_set(mode="EDIT")
+                        bpy.ops.mesh.select_all(action="SELECT")
+                        bpy.ops.mesh.remove_doubles(threshold=0.00004)
+                        bpy.ops.object.mode_set(mode="OBJECT")
                 else:
                     bpy.data.objects.remove(mesh, do_unlink=True)
 
