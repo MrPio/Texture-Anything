@@ -186,7 +186,7 @@ class Object3D(abc.ABC):
         samples=8,
         bake_type: Literal["DIFFUSE", "GLOSSY"] = "DIFFUSE",
         load_lights=True,
-        device=True,
+        device="CPU",
     ) -> tuple[Image.Image, Image.Image]:
         """Regenerate a new UV map and Bake the diffuse texture accordingly.
 
