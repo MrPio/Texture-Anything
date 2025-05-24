@@ -48,5 +48,5 @@ class ShapeNetCoreObject3D(Object3D):
     def rendering(self) -> PIL.Image.Image | None:
         from src.dataset.shapenetcore_dataset3d import ShapeNetCoreDataset3D
 
-        path = ShapeNetCoreDataset3D.DATASET_PATH / "render" / f"{self.uid}.jpg"
+        path = ShapeNetCoreDataset3D.DATASET_DIR / "render" / f"{self.uid}.jpg"
         return PIL.Image.open(path) if path.exists() else None

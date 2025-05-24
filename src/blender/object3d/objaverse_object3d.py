@@ -47,7 +47,7 @@ class ObjaverseObject3D(Object3D):
     def rendering(self) -> PIL.Image.Image | None:
         from src.dataset.objaverse_dataset3d import ObjaverseDataset3D
 
-        path = ObjaverseDataset3D.DATASET_PATH / "render" / f"{self.uid}.jpg"
+        path = ObjaverseDataset3D.DATASET_DIR / "render" / f"{self.uid}.jpg"
         return PIL.Image.open(
             path
             if path.exists()

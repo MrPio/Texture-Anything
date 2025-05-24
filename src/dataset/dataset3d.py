@@ -11,13 +11,14 @@ from ..blender.object3d.object3d import Object3D
 class Dataset3D(abc.ABC):
     """Represents a dataset of 3D objects."""
 
-    DATASET_PATH = Path(__file__).resolve().parents[2] / "dataset"
+    DATASET_DIR = Path(__file__).resolve().parents[2] / "dataset"
     DATASET_SUBFOLDERS = ["uv", "mask", "render", "diffuse", "objects"]
     IMG_EXT = [".jpg", ".JPG", ".jpeg", ".JPEG", ".png", ".PNG"]
+    MIN_UV_SCORE=0.66
 
     def __init__(self, dataset_folder: str, object_class: type[Object3D]):
         for folder in Dataset3D.DATASET_SUBFOLDERS:
-            (Dataset3D.DATASET_PATH / dataset_folder / folder).mkdir(parents=True, exist_ok=True)
+            (Dataset3D.DATASET_DIR / dataset_folder / folder).mkdir(parents=True, exist_ok=True)
         self.dataset_folder = dataset_folder
         self.object_class = object_class
 
@@ -36,23 +37,23 @@ class Dataset3D(abc.ABC):
     @cached_property
     def statistics(self) -> Optional[pd.DataFrame]:
         """The statistics generated on the downloaded models. Columns are: `meshCount`, `uvCount`, `diffuseCount`, `uvScore` and `valid`. The `valid` column enstablish if a sample meets all the requirements."""
-        p = self.DATASET_PATH / "statistics.parquet"
+        p = self.DATASET_DIR / "statistics.parquet"
         if not p.exists():
             return None
         df = pd.read_parquet(p)
-        df["valid"] = (df["diffuseCount"] == 1) & (df["uvCount"] == 1) & (df["uvScore"] > 0.66)
+        df["valid"] = (df["diffuseCount"] == 1) & (df["uvCount"] == 1) & (df["uvScore"] > self.MIN_UV_SCORE)
         return df
 
     @cached_property
     def captions(self) -> dict[str, str]:
-        return json.load(open(self.DATASET_PATH / "caption" / "captions.json"))
+        return json.load(open(self.DATASET_DIR / "caption" / "captions.json"))
 
     @cached_property
     def triplets(self) -> set[str]:
         """Load the triplets dataset as intersection of uids in `caption`, `uv` and `diffuse` folders."""
-        captions = {x.stem for x in (self.DATASET_PATH / "render").glob("*") if x.suffix in Dataset3D.IMG_EXT}
-        uvs = {x.stem for x in (self.DATASET_PATH / "uv").glob("*") if x.suffix in Dataset3D.IMG_EXT}
-        diffuses = {x.stem for x in (self.DATASET_PATH / "diffuse").glob("*") if x.suffix in Dataset3D.IMG_EXT}
+        captions = {x.stem for x in (self.DATASET_DIR / "render").glob("*") if x.suffix in Dataset3D.IMG_EXT}
+        uvs = {x.stem for x in (self.DATASET_DIR / "uv").glob("*") if x.suffix in Dataset3D.IMG_EXT}
+        diffuses = {x.stem for x in (self.DATASET_DIR / "diffuse").glob("*") if x.suffix in Dataset3D.IMG_EXT}
         return captions.intersection(uvs, diffuses)
 
     def __getitem__(self, args: dict) -> Object3D | None:

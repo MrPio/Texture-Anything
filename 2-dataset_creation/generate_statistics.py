@@ -85,4 +85,4 @@ if rank == 0:
     if args.demo:
         log(final_statistics)
     else:
-        final_statistics.to_parquet(datasets[args.dataset].DATASET_PATH / "statistics.parquet")
+        final_statistics.to_parquet(datasets[args.dataset].DATASET_DIR / "statistics.parquet")

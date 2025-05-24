@@ -22,7 +22,7 @@ from src import *
 assert load_dotenv()
 
 dataset = ShapeNetCoreDataset3D()
-objects_dir = dataset.DATASET_PATH / "objects"
+objects_dir = dataset.DATASET_DIR / "objects"
 
 comm = MPI.COMM_WORLD
 rank, size = comm.Get_rank(), comm.Get_size()

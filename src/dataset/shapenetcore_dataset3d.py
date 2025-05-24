@@ -11,7 +11,7 @@ from ..blender.object3d.shapenetcore_object3d import ShapeNetCoreObject3D
 
 
 class ShapeNetCoreDataset3D(Dataset3D):
-    DATASET_PATH = Dataset3D.DATASET_PATH / "shapenetcore"
+    DATASET_DIR = Dataset3D.DATASET_DIR / "shapenetcore"
     # Sorted by file size, largest to smallest
     CATEGORIES = [
         "02958343",
@@ -70,6 +70,7 @@ class ShapeNetCoreDataset3D(Dataset3D):
         "04074963",
         "02843684",
     ]
+    MIN_UV_SCORE=0
 
     def __init__(self):
         super().__init__("shapenetcore", ShapeNetCoreObject3D)
@@ -82,7 +83,7 @@ class ShapeNetCoreDataset3D(Dataset3D):
     def paths(self) -> dict[str, str]:
         return {
             m.name: str(m)
-            for p in tqdm((ShapeNetCoreDataset3D.DATASET_PATH / "objects").iterdir())
+            for p in tqdm((ShapeNetCoreDataset3D.DATASET_DIR / "objects").iterdir())
             if p.is_dir()
             for m in p.iterdir()
         }
@@ -99,7 +100,7 @@ class ShapeNetCoreDataset3D(Dataset3D):
         """
         chunk_size = 16_384
         base_url = "https://huggingface.co/datasets/ShapeNet/ShapeNetCore/resolve/main/"
-        objects_path = self.DATASET_PATH / "objects"
+        objects_path = self.DATASET_DIR / "objects"
         headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}
         already_downloaded = list(f.stem for f in objects_path.glob("*") if f.is_dir())
 
