@@ -5,8 +5,7 @@ Please make sure that you have downloaded the objects relative to the UIDs in th
 This script is CWD-independent.
 
 Usage:
-    $ srun -n 8 --mem=8G --partition=boost_usr_prod python generate_statistics.py
-    $ srun -n 2 --mem=8G --partition=boost_usr_prod --qos=boost_qos_dbg --time=00:02:00 python generate_statistics.py -d
+    $ srun -n 4 --mem=24G  --time=04:00:00 python 2-dataset_creation/generate_statistics.py --dataset="shapenetcore"
 
 Author:
     Valerio Morelli - 2025-05-08

@@ -14,7 +14,8 @@ class Dataset3D(abc.ABC):
     DATASET_DIR = Path(__file__).resolve().parents[2] / "dataset"
     DATASET_SUBFOLDERS = ["uv", "mask", "render", "diffuse", "objects"]
     IMG_EXT = [".jpg", ".JPG", ".jpeg", ".JPEG", ".png", ".PNG"]
-    MIN_UV_SCORE=0.66
+    MIN_UV_SCORE = 0.66
+    BAKE_TYPE = "DIFFUSE"
 
     def __init__(self, dataset_folder: str, object_class: type[Object3D]):
         for folder in Dataset3D.DATASET_SUBFOLDERS:
@@ -56,12 +57,14 @@ class Dataset3D(abc.ABC):
         diffuses = {x.stem for x in (self.DATASET_DIR / "diffuse").glob("*") if x.suffix in Dataset3D.IMG_EXT}
         return captions.intersection(uvs, diffuses)
 
-    def __getitem__(self, args: dict) -> Object3D | None:
+    def __getitem__(self, args: dict | str) -> Object3D | None:
         """Get a Object3D with the given UID
 
         Args:
-            args (dict): Must contain at least the `uid` key. Might contain additional arguments for the constructor of the instance of Object3D returned.
+            args: The uid of the object to retrieve. If a dict, must contain at least the `uid` key. Might contain additional arguments for the constructor of the instance of Object3D returned.
         """
+        if isinstance(args, str):
+            args = {"uid": args}
         uid = args.pop("uid")
         silent = args.pop("silent", False)
         try:

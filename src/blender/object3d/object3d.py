@@ -180,7 +180,13 @@ class Object3D(abc.ABC):
         return img
 
     def regenerate_uv_map(
-        self, island_margin=0, size=512, samples=8, bake_type: Literal["DIFFUSE", "GLOSSY"] = "DIFFUSE"
+        self,
+        island_margin=0,
+        size=512,
+        samples=8,
+        bake_type: Literal["DIFFUSE", "GLOSSY"] = "DIFFUSE",
+        load_lights=True,
+        configure_engine=True,
     ) -> tuple[Image.Image, Image.Image]:
         """Regenerate a new UV map and Bake the diffuse texture accordingly.
 
@@ -190,17 +196,17 @@ class Object3D(abc.ABC):
         assert self.has_one_mesh
 
         # Switch to Object mode
+        mesh = self.mesh.data
         self.mesh.select_set(True)
         bpy.context.view_layer.objects.active = self.mesh
-        bpy.ops.object.mode_set(mode="OBJECT")
-        mesh = self.mesh.data
+        # bpy.ops.object.mode_set(mode="OBJECT")
 
         # 1. Duplicate the existing UV map
         mesh.uv_layers.new(name="SmartUV")
         mesh.uv_layers.active = mesh.uv_layers["SmartUV"]
 
         # 2. Smart UV unwrap
-        bpy.context.view_layer.objects.active = self.mesh
+        # bpy.context.view_layer.objects.active = self.mesh
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
         bpy.ops.uv.smart_project(island_margin=island_margin)
@@ -218,8 +224,11 @@ class Object3D(abc.ABC):
         mat.node_tree.nodes.active = tex_node
 
         # 5. Bake the texture to the new image
-        load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=1.5)
-        bpy.context.scene.render.engine = "CYCLES"
+        if load_lights:
+            load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=1.5)
+        if configure_engine:
+            bpy.context.scene.render.engine = "CYCLES"
+            bpy.context.scene.cycles.device = device
         bpy.context.scene.cycles.samples = samples
         self.mesh.select_set(True)
         bpy.ops.object.bake(type=bake_type)
@@ -230,6 +239,8 @@ class Object3D(abc.ABC):
         image_pil = Image.fromarray(pixels, "RGBA")
 
         return image_pil, self.draw_uv_map()
+
+
 
     def export(self, path: Path | str):
         bpy.ops.wm.save_as_mainfile(filepath=str(path))

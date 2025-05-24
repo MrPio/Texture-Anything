@@ -3,31 +3,27 @@ Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse text
 This script is CWD-independent
 
 Usage:
-    $ srun -n 24 --mem=10G --gpus-per-task=0 --partition=boost_usr_prod \
-        python generate_dataset.py --computation-node
+    $ srun -n 4 --mem=24G  --time=04:00:00 \
+        python 2-dataset_creation/generate_dataset.py --dataset="shapenetcore" --regenerate-uv
 
 Author:
     Valerio Morelli - 2025-05-08
 """
 
-from io import BytesIO
-import multiprocessing
 import numpy as np
 from tqdm import tqdm
 import sys
-import PIL.Image as PILImage
-import requests
 from pathlib import Path
+import bpy
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_DIR))
 from src import *
 from mpi4py import MPI
 import argparse
-
+from torch.cuda import is_available as has_cuda
 
 MIN_UV_DENSITY = 0.0085
-MIN_RENDER_MEGAPIXEL = 200_000
 comm = MPI.COMM_WORLD
 rank, size = comm.Get_rank(), comm.Get_size()
 cprint("Rank:", rank, "Size:", size)
@@ -36,7 +32,7 @@ cprint("Rank:", rank, "Size:", size)
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="objaverse")
-    parser.add_argument("--overwrite-existing", action="store_true")
+    parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--regenerate-uv", action="store_true")
     return parser.parse_args()
 
@@ -45,26 +41,52 @@ args = parse_args()
 
 dataset = datasets[args.dataset]()
 DATASET_DIR = dataset.DATASET_DIR
-if not args.overwrite_existing:
-    already_processed_uids = [
-        x.stem for x in (DATASET_DIR / "uv" if args.computation_node else "render").glob("*") if x.is_file()
-    ]
-    print(f"Already processed {len(already_processed_uids)} objects")
-else:
-    already_processed_uids = []
+already_proc = set() if args.overwrite else {x.stem for x in (DATASET_DIR / "uv").glob("*.png")}
+log(f"Already processed", len(already_proc), "objects")
 
 uids = dataset.statistics[dataset.statistics["valid"]].index[rank::size]
-uids = [x for x in uids if x not in already_processed_uids]
+uids = set(uids).difference(already_proc)
+
+# Optimization --------------------------------
+if args.regenerate_uv:
+    prefs = bpy.context.preferences
+    prefs.edit.use_global_undo = False
+    for area in bpy.context.screen.areas:
+        if area.type == "VIEW_3D":
+            area.spaces[0].shading.show_backface_culling = False
+            area.tag_redraw()
+            
+    bpy.context.view_layer.update()
+    load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=1.5)
+    device = "GPU" if has_cuda() else "CPU"
+    log("Device=", f"red:{device}")
+    
+    scene = bpy.context.scene
+    scene.render.engine = 'CYCLES'
+    if has_cuda():
+        prefs = bpy.context.preferences
+        prefs.addons['cycles'].preferences.compute_device_type = 'CUDA'  # or 'OPTIX' on NVIDIA
+        scene.cycles.device = 'GPU'
+        scene.cycles.tile_x = 256
+        scene.cycles.tile_y = 256
+    else:
+        scene.cycles.device = 'CPU'
+
+# ---------------------------------------------
 
 for uid in tqdm(uids, disable=rank != 0):
     obj = dataset[uid]
     if args.regenerate_uv:
         diffuse, uv_map = obj.regenerate_uv_map(
-            samples=10,
-            bake_type="GLOSSY" if args.dataset == "shapenetcore" else "DIFFUSE",
+            samples=8,
+            bake_type=dataset.BAKE_TYPE,
+            load_lights=False,
+            configure_engine=False,
         )
     else:
         diffuse, uv_map = obj.textures[0], obj.draw_uv_map()
+    if compute_image_density(uv_map) < MIN_UV_DENSITY:
+        continue
     uv_filled = obj.draw_uv_map(fill=True)
     mask = np.all(np.array(uv_filled) == [0, 0, 0, 255], axis=2)
 

@@ -71,6 +71,7 @@ class ShapeNetCoreDataset3D(Dataset3D):
         "02843684",
     ]
     MIN_UV_SCORE=0
+    BAKE_TYPE="GLOSSY"
 
     def __init__(self):
         super().__init__("shapenetcore", ShapeNetCoreObject3D)
