@@ -186,7 +186,7 @@ class Object3D(abc.ABC):
         samples=8,
         bake_type: Literal["DIFFUSE", "GLOSSY"] = "DIFFUSE",
         load_lights=True,
-        configure_engine=True,
+        device=True,
     ) -> tuple[Image.Image, Image.Image]:
         """Regenerate a new UV map and Bake the diffuse texture accordingly.
 
@@ -226,9 +226,8 @@ class Object3D(abc.ABC):
         # 5. Bake the texture to the new image
         if load_lights:
             load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=1.5)
-        if configure_engine:
-            bpy.context.scene.render.engine = "CYCLES"
-            bpy.context.scene.cycles.device = device
+        bpy.context.scene.render.engine = "CYCLES"
+        bpy.context.scene.cycles.device = device
         bpy.context.scene.cycles.samples = samples
         self.mesh.select_set(True)
         bpy.ops.object.bake(type=bake_type)
