@@ -1,12 +1,17 @@
 # Lessons Learned
 
 - [Lessons Learned](#lessons-learned)
+  - [`lrd_all_serial` partition is free of charge.](#lrd_all_serial-partition-is-free-of-charge)
   - [Blender has difficulties in read OBJ](#blender-has-difficulties-in-read-obj)
   - [Work with multiple site-packages (one in venv, one global)](#work-with-multiple-site-packages-one-in-venv-one-global)
   - [How I was able to achieve massive parallelism](#how-i-was-able-to-achieve-massive-parallelism)
   - [How I was able to install `mpi4py` on Cineca's Leonardo HPC](#how-i-was-able-to-install-mpi4py-on-cinecas-leonardo-hpc)
     - [Test script](#test-script)
 
+## `lrd_all_serial` partition is free of charge.
+Unbeliveble, with a max walltime of 4h, the `lrd_all_serial` partition is truly out of charge. I heavily used it on 23 May 2025, but my `saldo -r` output clearly states that none of them hourse were detracted from the project's budget.
+
+Moreover, it has internet access.
 
 ## Blender has difficulties in read OBJ
 Shapenetcore files are in the OBJ format. Trimesh has no problems in reading them, but blender's renderings are glitchy. Thus, I first exported them as GLB files using
