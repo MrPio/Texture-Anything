@@ -11,9 +11,14 @@ import bpy
 
 
 class ShapeNetCoreObject3D(Object3D):
-    def __init__(self, uid: str, path: str | Path, type="glb", merge_vertices=True):
+    def __init__(self, uid: str, path: str | Path, type="glb", merge_vertices=True, preprocess=True):
         super(ShapeNetCoreObject3D, self).__init__(uid, Path(path, "models", f"model_normalized.{type}"))
-        if type == "glb":
+        if type == "glb" and preprocess:
+            if len(self.textures) == 1 and len(self.meshes) > 2:
+                raise Exception(
+                    "Tried to load a GLB-converted ShapeNetCore object with more than 1 mesh. This is not allowed because, after pruning the non textured meshes, the resulting object may represent a small part of the original one, and thus, the resulting renderings would be meaningless."
+                )
+
             # Remove the parent axis object
             bpy.data.objects.remove(bpy.data.objects["world"], do_unlink=True)
 

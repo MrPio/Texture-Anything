@@ -504,6 +504,12 @@ def parse_args(input_args=None):
     )
     # Added by us:
     parser.add_argument(
+        "--use_pixel_space_loss",
+        action="store_true",
+        help="Wheter to use the Masked MSE in pixel space instead of regular latent MSE loss."
+    )
+    # Added by us:
+    parser.add_argument(
         "--invert_conditioning_image",
         action="store_true",
         help="Whether to invert the color of the condition image. Useful when control images are UV maps and the CNet is loaded from a pretrained mlsd checkpoint.",
@@ -1142,20 +1148,20 @@ def main(args):
                 loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
                 
                 # ========== NEW: Pixel-space loss ==========
-                with torch.no_grad():
-                    # Restore z0
-                    alpha_bar = noise_scheduler.alphas_cumprod[timesteps].reshape(-1, 1, 1, 1).to(latents.device)
-                    z0_pred = (noisy_latents - (1 - alpha_bar).sqrt() * model_pred) / alpha_bar.sqrt()
+                # with torch.no_grad():
+                # Restore z0
+                alpha_bar = noise_scheduler.alphas_cumprod[timesteps].reshape(-1, 1, 1, 1).to(latents.device)
+                z0_pred = (noisy_latents - (1 - alpha_bar).sqrt() * model_pred) / alpha_bar.sqrt()
 
-                    # Decode latent image
-                    recon_images = vae.decode(z0_pred / vae.config.scaling_factor).sample
+                # Decode latent image
+                recon_images = vae.decode((z0_pred / vae.config.scaling_factor).to(noisy_latents.dtype)).sample
 
                 # Calculate pixel loss between reconstructed image and ground truth
                 pixel_loss = F.mse_loss(recon_images.float(), batch["pixel_values"].to(recon_images.device).float(), reduction="mean")
 
                 # ===========================================
 
-                accelerator.backward(loss)
+                accelerator.backward(pixel_loss if args.use_pixel_space_loss else loss)
                 if accelerator.sync_gradients:
                     params_to_clip = controlnet.parameters()
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)

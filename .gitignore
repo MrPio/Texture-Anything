@@ -9,6 +9,8 @@
 1-annotations_filtering/objaverse_cleaned.csv
 1-annotations_filtering/objaverse_cleaned.parquet
 .vscode/
+*.blend
+*.blend1
 
 dataset/objaverse/0-annotations.pkl
 dataset/objaverse/1-annotations_filtered.parquet

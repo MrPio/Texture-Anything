@@ -240,8 +240,6 @@ class Object3D(abc.ABC):
 
         return image_pil, self.draw_uv_map()
 
-
-
     def export(self, path: Path | str):
         bpy.ops.wm.save_as_mainfile(filepath=str(path))
 

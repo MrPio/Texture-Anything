@@ -2,7 +2,7 @@
 
 ## TODO
 
-    - [ ] Data Augmentation:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture
+    - [ ] Data Augmentation:se abbiamo un certo insieme di oggetti con UV particolarmente buona e texture generica, possiamo moltiplicare i samples scambiando le texture. Lo possiamo usare su shapenet core che ha sempre texture omogenee, e i samples puliti sono pochi (10.000, ma di cui molti sono oggetti parziali sparsi)
     - [-] Rigenerare le texture/UV di Objaverse con smart
     - [-] La MSE non deve pesare le zone non mappate: EDIT: non è possibile farlo. Però possiamo rndere nere le zone non mappate
 
