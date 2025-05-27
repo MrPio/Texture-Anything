@@ -21,6 +21,7 @@ VALIDATION_UIDS = [
     "0adf456c59094a3da23329a6d27cb239",
     "3b15c410f87f42daa7e8cb5b5f74e3f1",
 ]
+TEST_UIDS = [x.stem for x in test_dir.glob("*")] if (test_dir := OUTPUT_PATH / "test" / "uid").exists() else None
 
 datasets: list[Dataset3D] = [ObjaverseDataset3D()]
 
@@ -54,7 +55,7 @@ for dataset in datasets:
     uids = list(avail_uids.intersection(valid_uids))
     if MAX_DATASET_SIZE:
         uids = list(set(uids[:MAX_DATASET_SIZE] + VALIDATION_UIDS))
-    test_uids = choice(uids, size=TESTSET_SIZE, replace=False)
+    test_uids = TEST_UIDS if TEST_UIDS else choice(uids, size=TESTSET_SIZE, replace=False)
     cprint(f"yellow:{dataset.__class__.__name__}", "has", len(avail_uids), "uids,", len(uids), "of them are valid.")
 
     uv_paths = {x.stem: x for x in (dataset.DATASET_DIR / "uv").glob("*") if x.suffix in dataset.IMG_EXT}

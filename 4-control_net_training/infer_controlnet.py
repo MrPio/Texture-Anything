@@ -4,11 +4,8 @@ Generate predictions over the testset. CWD-independent.
 Usage:
     $ srun --mem=16G --gres=gpu:1 --time=00:08:00 --partition=boost_usr_prod --qos=boost_qos_dbg \
         python infer_controlnet.py \
-            --cnet="SD1.5_CNmlsd_96bs_1e-5lr_8k_masked-gt" \
-            --checkpoint=4920
-            
-srun --mem=16G --gres=gpu:1 --time=00:08:00 --partition=boost_usr_prod --qos=boost_qos_dbg \
-        python infer_controlnet.py
+            --cnet="SD1.5_CNmlsd_64bs_1e-5lr_8k_pixel-loss" \
+            --checkpoint=5000
             
 Based on: https://github.com/huggingface/diffusers/tree/main/examples/controlnet
 """
