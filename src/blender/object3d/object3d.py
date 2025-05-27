@@ -34,7 +34,16 @@ class Object3D(abc.ABC):
         self.uid = uid
         self.path = Path(path) if path is str else path
 
+        # Load model
         self.objects = load_model(str(self.path), reset_scene=True)
+
+        # Center each object in the scene
+        for obj in self.objects:
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+            obj.location = (0.0, 0.0, 0.0)
+
+        # Extract meshes
         self.meshes = [x for x in self.objects if x.type == "MESH"]
         self.has_one_mesh = len(self.meshes) == 1
         self.mesh = self.meshes[0]
