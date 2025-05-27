@@ -291,3 +291,61 @@ class Object3D(abc.ABC):
             os.remove(path)
 
         return images
+    
+
+    def set_texture(self, image_path: str):
+        """
+        Replaces the object's main texture (Base Color) with a new image.
+
+        This function assumes the object has a single mesh with a material that
+        uses nodes and a Principled BSDF shader. It creates or updates the image
+        texture node and connects it to the Base Color input of the shader.
+
+        Args:
+            image_path (str): Absolute path to the image to be used as texture.
+
+        Raises:
+            AssertionError: If the object does not have exactly one mesh.
+            FileNotFoundError: If the image cannot be loaded.
+        """
+        assert self.has_one_mesh, "Object must have exactly one mesh."
+
+        # Load the new image
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Texture image not found: {image_path}")
+        image = bpy.data.images.load(image_path)
+
+        # Get the active material
+        material = self.mesh.active_material
+        if not material:
+            raise RuntimeError("Mesh has no material assigned.")
+        if not material.use_nodes:
+            material.use_nodes = True
+
+        node_tree = material.node_tree
+        nodes = node_tree.nodes
+        links = node_tree.links
+
+        # Find or create the image texture node
+        tex_node = next((n for n in nodes if n.type == 'TEX_IMAGE'), None)
+        if not tex_node:
+            tex_node = nodes.new('ShaderNodeTexImage')
+            tex_node.location = (-300, 300)
+
+        tex_node.image = image
+
+        # Find the Principled BSDF node
+        bsdf_node = next((n for n in nodes if n.type == 'BSDF_PRINCIPLED'), None)
+        if not bsdf_node:
+            raise RuntimeError("No Principled BSDF node found in material.")
+
+        # Remove existing Base Color connections
+        while bsdf_node.inputs['Base Color'].is_linked:
+            link = bsdf_node.inputs['Base Color'].links[0]
+            links.remove(link)
+
+        # Connect texture node to Base Color
+        links.new(tex_node.outputs['Color'], bsdf_node.inputs['Base Color'])
+
+        # Set the texture node as active (useful for baking)
+        node_tree.nodes.active = tex_node
