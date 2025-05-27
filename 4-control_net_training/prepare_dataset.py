@@ -14,7 +14,8 @@ sys.path.append(str(FILE_DIR.parent))
 from src import *
 
 MAX_DATASET_SIZE = None  # 1_000
-TEST_SET_RATIO = 0.01  # diffusers train script doesn't use a test set
+TESTSET_SIZE = 50  # diffusers train script doesn't use a test set
+BLACK_TRESHOLD = 0.66
 OUTPUT_PATH = Path(FILE_DIR / "dataset").resolve()
 VALIDATION_UIDS = [
     "0adf456c59094a3da23329a6d27cb239",
@@ -53,7 +54,7 @@ for dataset in datasets:
     uids = list(avail_uids.intersection(valid_uids))
     if MAX_DATASET_SIZE:
         uids = list(set(uids[:MAX_DATASET_SIZE] + VALIDATION_UIDS))
-    test_uids = choice(uids, size=int(len(uids) * TEST_SET_RATIO), replace=False)
+    test_uids = choice(uids, size=TESTSET_SIZE, replace=False)
     cprint(f"yellow:{dataset.__class__.__name__}", "has", len(avail_uids), "uids,", len(uids), "of them are valid.")
 
     uv_paths = {x.stem: x for x in (dataset.DATASET_DIR / "uv").glob("*") if x.suffix in dataset.IMG_EXT}
@@ -69,7 +70,7 @@ for dataset in datasets:
             continue
         mask = np.unpackbits(np.load(mask_paths[uid])).reshape(1024, 1024)
         masked_diffuse = mask_image(diffuse, mask)
-        if is_black(masked_diffuse, threshold=0.66):
+        if is_black(masked_diffuse, threshold=BLACK_TRESHOLD):
             continue
         masked_diffuse.save(OUTPUT_PATH / split / "diffuse" / f"{uid}.png")
         metadata.loc[-1] = [
