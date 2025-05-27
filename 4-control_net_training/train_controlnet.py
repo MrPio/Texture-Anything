@@ -1140,7 +1140,20 @@ def main(args):
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
                 loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
-                # loss = masked_mse_loss(model_pred.float(), target.float(), mask)  # +
+                
+                # ========== NEW: Pixel-space loss ==========
+                with torch.no_grad():
+                    # Restore z0
+                    alpha_bar = noise_scheduler.alphas_cumprod[timesteps].reshape(-1, 1, 1, 1).to(latents.device)
+                    z0_pred = (noisy_latents - (1 - alpha_bar).sqrt() * model_pred) / alpha_bar.sqrt()
+
+                    # Decode latent image
+                    recon_images = vae.decode(z0_pred / vae.config.scaling_factor).sample
+
+                # Calculate pixel loss between reconstructed image and ground truth
+                pixel_loss = F.mse_loss(recon_images.float(), batch["pixel_values"].to(recon_images.device).float(), reduction="mean")
+
+                # ===========================================
 
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
@@ -1194,7 +1207,12 @@ def main(args):
                             global_step,
                         )
 
-            logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+            #logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+            logs = {
+                "latent_loss": loss.detach().item(),
+                "pixel_loss": pixel_loss.detach().item(),
+                "lr": lr_scheduler.get_last_lr()[0]
+            }
             progress_bar.set_postfix(**logs)
             accelerator.log(logs, step=global_step)
 
