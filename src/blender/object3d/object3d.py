@@ -272,7 +272,7 @@ class Object3D(abc.ABC):
 
     def render(
         self,
-        distance=1.15,
+        distance=1.1,
         samples=1,
         size=(512, 512),
         views=4,
@@ -301,7 +301,9 @@ class Object3D(abc.ABC):
         if views < 1:
             return
         for ang in map(math.radians, tqdm(range(45, 45 + 360, 360 // views))):
-            scene.camera.location = Vector((radius * math.cos(ang), radius * math.sin(ang), radius * math.cos(ang//4)))
+            scene.camera.location = Vector(
+                (radius * math.cos(ang), radius * math.sin(ang), radius * math.cos(ang // 4))
+            )
             scene.camera.rotation_euler = (
                 (Vector((0, 0, 0)) - scene.camera.location).to_track_quat("-Z", "Y").to_euler()
             )
@@ -320,7 +322,7 @@ class Object3D(abc.ABC):
 
         return images
 
-    def set_texture(self, image_path: Path | str):
+    def change_texture(self, image_path: Path | str):
         """
         Replaces the object's main texture (Base Color) with a new image.
 
@@ -330,8 +332,13 @@ class Object3D(abc.ABC):
         """
         assert self.has_one_mesh
 
+        # Flip image vertically, because the drawn UV are vertically flipped
+        fd, path = tempfile.mkstemp(suffix=".png")
+        Image.open(image_path).transpose(Image.FLIP_TOP_BOTTOM).save(path)
+        os.close(fd)
+
         # Load the new image
-        image = bpy.data.images.load(str(Path(image_path).resolve()))
+        image = bpy.data.images.load(str(Path(path).resolve()))
 
         # Get the active material
         material = self.mesh.active_material
