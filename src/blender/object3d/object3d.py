@@ -51,17 +51,7 @@ class Object3D(abc.ABC):
             obj.location = (0.0, 0.0, 0.0)
 
         # Normalize the size so that the max dimension is 1m
-        sizes = []
-        for obj in self.meshes:
-            # obj.bound_box returns a list of 8 corner axis-aligned points
-            bbox = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
-            max_size = max((max(c[i] for c in bbox) - min(c[i] for c in bbox)) for i in range(3))
-            sizes.append(max_size)
-        if max(sizes) > 0:
-            for obj in self.meshes:
-                bpy.context.view_layer.objects.active = obj
-                obj.scale /= max(sizes)
-                bpy.ops.object.transform_apply(scale=True)
+        self.normalize_scale()
 
         # Extract meshes
         self.has_one_mesh = len(self.meshes) == 1
@@ -81,6 +71,20 @@ class Object3D(abc.ABC):
                                 if link.to_socket.name == "Base Color":
                                     nodes.append(node)
         return nodes
+
+    def normalize_scale(self):
+        sizes = []
+        for obj in self.meshes:
+            # obj.bound_box returns a list of 8 corner axis-aligned points
+            bbox = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+            max_size = max((max(c[i] for c in bbox) - min(c[i] for c in bbox)) for i in range(3))
+            sizes.append(max_size)
+
+        if max(sizes) > 0:
+            for obj in self.meshes:
+                bpy.context.view_layer.objects.active = obj
+                obj.scale /= max(sizes)
+                bpy.ops.object.transform_apply(scale=True)
 
     @cached_property
     def mesh_stats(self) -> dict:
@@ -213,6 +217,7 @@ class Object3D(abc.ABC):
         samples=8,
         bake_type: Literal["DIFFUSE", "GLOSSY"] = "DIFFUSE",
         load_lights=True,
+        light_strength=1,
         device="CPU",
     ) -> tuple[Image.Image, Image.Image]:
         """Regenerate a new UV map and Bake the diffuse texture accordingly.
@@ -221,20 +226,17 @@ class Object3D(abc.ABC):
             tuple[Image.Image, Image.Image]: The new texture and the drawing of the new UV map.
         """
         assert self.has_one_mesh
-        print(bake_type)
 
         # Switch to Object mode
         mesh = self.mesh.data
         self.mesh.select_set(True)
         bpy.context.view_layer.objects.active = self.mesh
-        # bpy.ops.object.mode_set(mode="OBJECT")
 
         # 1. Duplicate the existing UV map
         mesh.uv_layers.new(name="SmartUV")
         mesh.uv_layers.active = mesh.uv_layers["SmartUV"]
 
         # 2. Smart UV unwrap
-        # bpy.context.view_layer.objects.active = self.mesh
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
         bpy.ops.uv.smart_project(island_margin=island_margin)
@@ -242,24 +244,42 @@ class Object3D(abc.ABC):
 
         # 3. Create new image to bake into
         img = bpy.data.images.new("BakedTexture", size, size)
-        mat = self.mesh.active_material
-        nodes = mat.node_tree.nodes
+        # mat = self.mesh.active_material
+        # nodes = mat.node_tree.nodes
 
-        # Create and activate the new texture node
-        tex_node = nodes.new("ShaderNodeTexImage")
-        tex_node.image = img
-        # Make sure it's the active one for baking
-        mat.node_tree.nodes.active = tex_node
+        # # Create and activate the new texture node
+        # tex_node = nodes.new("ShaderNodeTexImage")
+        # tex_node.image = img
+        # # Make sure it's the active one for baking
+        # mat.node_tree.nodes.active = tex_node
+
+        # 4. For every material slot on the mesh, add an Image Texture node
+        #    that points to our new image and mark it active in that material.
+        for slot in self.mesh.material_slots:
+            mat = slot.material
+            if not mat or mat.use_nodes is False:
+                continue
+
+            # make sure this material is using nodes
+            nodes = mat.node_tree.nodes
+
+            # create a new image‐texture node and point it at our bake target
+            tex_node = nodes.new("ShaderNodeTexImage")
+            tex_node.image = img
+            tex_node.select = True
+
+            # ensure it’s the active image node for baking
+            mat.node_tree.nodes.active = tex_node
 
         # 5. Bake the texture to the new image
         if load_lights:
-            load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=1.75)
+            load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=light_strength)
         bpy.context.scene.render.engine = "CYCLES"
         bpy.context.scene.cycles.device = device
         bpy.context.scene.cycles.samples = samples
         bpy.context.scene.cycles.use_denoising = True
         self.mesh.select_set(True)
-        bpy.ops.object.bake(type=bake_type)
+        bpy.ops.object.bake(type=bake_type, use_clear=True)
 
         # 6. Convert to PIL
         pixels = (np.array(img.pixels) * 255).astype(np.uint8)
@@ -268,17 +288,17 @@ class Object3D(abc.ABC):
 
         return image_pil, self.draw_uv_map()
 
-    def export(self, path: Path | str):
-        bpy.ops.wm.save_as_mainfile(filepath=str(path))
+    def export(self, path: Path | str = "scene.blend"):
+        bpy.ops.wm.save_as_mainfile(filepath=str(Path(path).resolve()))
 
     def render(
         self,
-        distance=1.1,
+        distance=1.75,
         samples=1,
         size=(512, 512),
         views=4,
         save_scene: Optional[str | Path] = None,
-        light_strength=2.0,
+        light_strength=1.75,
     ) -> list[Image.Image]:
         scene = bpy.context.scene
 
@@ -303,7 +323,7 @@ class Object3D(abc.ABC):
             return
         for ang in map(math.radians, tqdm(range(45, 45 + 360, 360 // views))):
             scene.camera.location = Vector(
-                (radius * math.cos(ang), radius * math.sin(ang), radius * math.cos(ang // 4))
+                (radius * math.cos(ang), radius * math.sin(ang), radius * math.cos(ang) / 2)
             )
             scene.camera.rotation_euler = (
                 (Vector((0, 0, 0)) - scene.camera.location).to_track_quat("-Z", "Y").to_euler()

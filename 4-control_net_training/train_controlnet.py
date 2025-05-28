@@ -507,7 +507,7 @@ def parse_args(input_args=None):
     # Added by us:
     parser.add_argument(
         "--pixel_space_loss_weight",
-        type="float",
+        type=float,
         default=0.5,
         help="the coefficient of the weighted sum between the latent MSE loss and the pixel-space MSE loss. A value of 0 indicates that only the former loss is used",
     )
@@ -520,8 +520,9 @@ def parse_args(input_args=None):
     # Added by us:
     parser.add_argument(
         "--mask_column",
-        action="store_true",
-        help="Wheter to use the Masked MSE in pixel space instead of regular latent MSE loss.",
+        type=str,
+        default="mask",
+        help="The column of the dataset containing the ground truth 1024x1024 masks.",
     )
     parser.add_argument(
         "--caption_column",
@@ -677,7 +678,7 @@ def make_train_dataset(args, tokenizer, accelerator):
             raise ValueError(
                 f"`--caption_column` value '{args.caption_column}' not found in dataset columns. Dataset columns are: {', '.join(column_names)}"
             )
-    mask_column = args.caption_column if args.caption_column else None
+    mask_column = args.mask_column if args.mask_column else None
 
     if args.conditioning_image_column is None:
         conditioning_image_column = column_names[2]
@@ -1200,7 +1201,7 @@ def main(args):
                 mask = batch["mask_values"]
                 pixel_loss = masked_mse_loss(
                     pred=recon_images.float(),
-                    target=batch["pixel_values"].to(recon_images.device).float(),
+                    targ=batch["pixel_values"].to(recon_images.device).float(),
                     mask=mask,
                 )
                 # ===========================================

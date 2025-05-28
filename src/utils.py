@@ -74,6 +74,21 @@ def is_textured(mesh):
     return False
 
 
+def is_white(obj):
+    for slot in obj.material_slots:
+        mat = slot.material
+        if not mat or not mat.use_nodes:
+            continue
+        
+        for node in mat.node_tree.nodes:
+            if node.type == 'BSDF_PRINCIPLED':
+                color = node.inputs['Base Color'].default_value
+                # Check if RGB is exactly white (ignore alpha)
+                if tuple(color[:3]) == (1.0, 1.0, 1.0):
+                    return True
+    return False
+
+
 def binary_mask_tensor(image_path: str) -> torch.Tensor:
     """
     Load a 1-bit black-and-white image and convert it to a PyTorch mask tensor.

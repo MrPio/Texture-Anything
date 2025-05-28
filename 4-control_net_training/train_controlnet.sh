@@ -9,10 +9,10 @@
 #SBATCH --job-name=controlnet_sd15
 #SBATCH --output=controlnet_sd15.log
 #SBATCH --error=controlnet_sd15.log
-#SBATCH --time=14:00:00
+#SBATCH --time=12:00:00
 #SBATCH --partition=boost_usr_prod
 ##SBATCH --qos=boost_qos_dbg                  # Refer to https://wiki.u-gov.it/confluence/display/SCAIUS/Booster+Section
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 #SBATCH --mem=42G
 
 export SD_MODEL="stable-diffusion-v1-5/stable-diffusion-v1-5"
@@ -46,6 +46,7 @@ accelerate launch --mixed_precision="fp16" --num_processes=1 train_controlnet.py
     --gradient_accumulation_steps=4 \
     --mixed_precision="fp16" \
     --checkpointing_steps=500 \
+    --validation_steps=250 \
     \
     --validation_image \
     "dataset/validation/uv/0adf456c59094a3da23329a6d27cb239.png" \

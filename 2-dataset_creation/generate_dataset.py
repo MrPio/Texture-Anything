@@ -3,8 +3,7 @@ Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse text
 This script is CWD-independent
 
 Usage:
-    $ srun -n 1 --mem=24G  --time=00:05:00 \
-        python 2-dataset_creation/generate_dataset.py --dataset="shapenetcore" --regenerate-uv --render
+    $ srun -n 8 --mem=30G  --time=02:00:00 python 2-dataset_creation/generate_dataset.py --dataset="shapenetcore" --regenerate-uv --render
 
 Author:
     Valerio Morelli - 2025-05-08
@@ -81,7 +80,7 @@ for uid in tqdm(uids, disable=rank != 0):
         mask = np.all(np.array(uv_filled) == [0, 0, 0, 255], axis=2)
         np.save(mask_path, np.packbits(mask))
 
-    if args.render:
+    if args.render and (args.overwrite or not (DATASET_DIR / "render" / f"{uid}_2.png").exists()):
         renderings = obj.render(samples=1, views=3, size=(512, 512))
         for i, rendering in enumerate(renderings):
             rendering.save(DATASET_DIR / "render" / f"{uid}_{i}.png")
