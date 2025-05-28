@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 
 import argparse
+import base64
 import contextlib
 import gc
 import logging
@@ -22,6 +23,7 @@ import os
 import random
 import shutil
 from pathlib import Path
+import zlib
 import PIL
 import accelerate
 import numpy as np
@@ -504,15 +506,22 @@ def parse_args(input_args=None):
     )
     # Added by us:
     parser.add_argument(
-        "--use_pixel_space_loss",
-        action="store_true",
-        help="Wheter to use the Masked MSE in pixel space instead of regular latent MSE loss."
+        "--pixel_space_loss_weight",
+        type="float",
+        default=0.5,
+        help="the coefficient of the weighted sum between the latent MSE loss and the pixel-space MSE loss. A value of 0 indicates that only the former loss is used",
     )
     # Added by us:
     parser.add_argument(
         "--invert_conditioning_image",
         action="store_true",
         help="Whether to invert the color of the condition image. Useful when control images are UV maps and the CNet is loaded from a pretrained mlsd checkpoint.",
+    )
+    # Added by us:
+    parser.add_argument(
+        "--mask_column",
+        action="store_true",
+        help="Wheter to use the Masked MSE in pixel space instead of regular latent MSE loss.",
     )
     parser.add_argument(
         "--caption_column",
@@ -668,6 +677,7 @@ def make_train_dataset(args, tokenizer, accelerator):
             raise ValueError(
                 f"`--caption_column` value '{args.caption_column}' not found in dataset columns. Dataset columns are: {', '.join(column_names)}"
             )
+    mask_column = args.caption_column if args.caption_column else None
 
     if args.conditioning_image_column is None:
         conditioning_image_column = column_names[2]
@@ -719,12 +729,22 @@ def make_train_dataset(args, tokenizer, accelerator):
         images = [image.convert("RGB") for image in examples[image_column]]
         images = [image_transforms(image) for image in images]
 
+        def decode_mask(mask: str) -> torch.Tensor:
+            mask_compressed = base64.b64decode(mask)
+            mask_decompressed = zlib.decompress(mask_compressed)
+            mask_packed = np.frombuffer(mask_decompressed, dtype=np.uint8)
+            mask_npy = np.unpackbits(mask_packed).reshape(1024, 1024)
+            return torch.from_numpy(mask_npy)
+
+        masks = [decode_mask(mask) for mask in examples[mask_column]]
+
         conditioning_images = [image.convert("RGB") for image in examples[conditioning_image_column]]
         if args.invert_conditioning_image:
             conditioning_images = [PIL.ImageOps.invert(image) for image in conditioning_images]
         conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
 
         examples["pixel_values"] = images
+        examples["mask_values"] = masks
         examples["conditioning_pixel_values"] = conditioning_images
         examples["input_ids"] = tokenize_captions(examples)
 
@@ -743,6 +763,9 @@ def collate_fn(examples):
     pixel_values = torch.stack([example["pixel_values"] for example in examples])
     pixel_values = pixel_values.to(memory_format=torch.contiguous_format).float()
 
+    mask_values = torch.stack([example["mask_values"] for example in examples])
+    mask_values = mask_values.to(memory_format=torch.contiguous_format).float()
+
     conditioning_pixel_values = torch.stack([example["conditioning_pixel_values"] for example in examples])
     conditioning_pixel_values = conditioning_pixel_values.to(memory_format=torch.contiguous_format).float()
 
@@ -750,9 +773,27 @@ def collate_fn(examples):
 
     return {
         "pixel_values": pixel_values,
+        "mask_values": mask_values,
         "conditioning_pixel_values": conditioning_pixel_values,
         "input_ids": input_ids,
     }
+
+
+def masked_mse_loss(pred, targ, mask):
+    """Compute the masked MSE loss
+
+    Args:
+        pred (torch.tensor): CNet output, shape=(N, C, W, H)
+        targ (torch.tensor): Ground truth, shape=(N, C, W, H)
+        mask (torch.tensor): UV mask, shape=(N, W, H)
+    """
+    _, channels, _, _ = pred.shape
+    # Repeat the channels (the mask is B/W)
+    mask = mask.float().unsqueeze(1).repeat(1, channels, 1, 1)
+    # Resize the mask to args.resolution
+    mask = F.interpolate(mask, size=pred.shape[2:], mode="nearest")
+    loss_elems = (F.mse_loss(pred.float(), targ.float(), reduction="none")) * mask
+    return loss_elems.sum() / (mask.sum() + 1e-6)
 
 
 def main(args):
@@ -1145,10 +1186,9 @@ def main(args):
                     target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
-                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
-                
+                latent_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+
                 # ========== NEW: Pixel-space loss ==========
-                # with torch.no_grad():
                 # Restore z0
                 alpha_bar = noise_scheduler.alphas_cumprod[timesteps].reshape(-1, 1, 1, 1).to(latents.device)
                 z0_pred = (noisy_latents - (1 - alpha_bar).sqrt() * model_pred) / alpha_bar.sqrt()
@@ -1157,11 +1197,15 @@ def main(args):
                 recon_images = vae.decode((z0_pred / vae.config.scaling_factor).to(noisy_latents.dtype)).sample
 
                 # Calculate pixel loss between reconstructed image and ground truth
-                pixel_loss = F.mse_loss(recon_images.float(), batch["pixel_values"].to(recon_images.device).float(), reduction="mean")
-
+                mask = batch["mask_values"]
+                pixel_loss = masked_mse_loss(
+                    pred=recon_images.float(),
+                    target=batch["pixel_values"].to(recon_images.device).float(),
+                    mask=mask,
+                )
                 # ===========================================
-
-                accelerator.backward(pixel_loss if args.use_pixel_space_loss else loss)
+                alpha = args.pixel_space_loss_weight
+                accelerator.backward(latent_loss * (1 - alpha) + pixel_loss * alpha)
                 if accelerator.sync_gradients:
                     params_to_clip = controlnet.parameters()
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
@@ -1213,11 +1257,11 @@ def main(args):
                             global_step,
                         )
 
-            #logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+            # logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             logs = {
-                "latent_loss": loss.detach().item(),
+                "latent_loss": latent_loss.detach().item(),
                 "pixel_loss": pixel_loss.detach().item(),
-                "lr": lr_scheduler.get_last_lr()[0]
+                "lr": lr_scheduler.get_last_lr()[0],
             }
             progress_bar.set_postfix(**logs)
             accelerator.log(logs, step=global_step)

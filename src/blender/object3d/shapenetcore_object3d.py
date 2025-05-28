@@ -19,9 +19,6 @@ class ShapeNetCoreObject3D(Object3D):
                     "Tried to load a GLB-converted ShapeNetCore object with more than 1 mesh. This is not allowed because, after pruning the non textured meshes, the resulting object may represent a small part of the original one, and thus, the resulting renderings would be meaningless."
                 )
 
-            # Remove the parent axis object
-            bpy.data.objects.remove(bpy.data.objects["world"], do_unlink=True)
-
             # Remove useless meshes and merge vertices by distance
             meshes = []
             for mesh in self.meshes:

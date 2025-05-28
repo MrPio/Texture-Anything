@@ -32,11 +32,12 @@ accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet.py
     --cache_dir=$CACHE_DIR \
     --train_data_dir=$DATASET_DIR \
     --image_column="diffuse" \
+    --mask_column="mask" \
     --conditioning_image_column="uv" \
     --caption_column="caption" \
     --invert_conditioning_image \
     \
-    --use_pixel_space_loss \
+    --pixel_space_loss_weight=0.5 \
     \
     --resolution=512 \
     --num_train_epochs=60 \

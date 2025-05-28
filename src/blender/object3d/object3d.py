@@ -253,10 +253,11 @@ class Object3D(abc.ABC):
 
         # 5. Bake the texture to the new image
         if load_lights:
-            load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=1.5)
+            load_hdri(Object3D.HDRI_PATH_WHITE, rotation=0, strength=1.75)
         bpy.context.scene.render.engine = "CYCLES"
         bpy.context.scene.cycles.device = device
         bpy.context.scene.cycles.samples = samples
+        bpy.context.scene.cycles.use_denoising = True
         self.mesh.select_set(True)
         bpy.ops.object.bake(type=bake_type)
 

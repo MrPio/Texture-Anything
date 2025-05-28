@@ -1,5 +1,7 @@
+import base64
 import sys
 from pathlib import Path
+import zlib
 from tqdm import tqdm
 from shutil import copy, rmtree
 import pandas as pd
@@ -21,7 +23,7 @@ VALIDATION_UIDS = [
     "0adf456c59094a3da23329a6d27cb239",
     "3b15c410f87f42daa7e8cb5b5f74e3f1",
 ]
-TEST_UIDS = [x.stem for x in test_dir.glob("*")] if (test_dir := OUTPUT_PATH / "test" / "uid").exists() else None
+TEST_UIDS = [x.stem for x in test_dir.glob("*")] if (test_dir := OUTPUT_PATH / "test" / "uv").exists() else None
 
 datasets: list[Dataset3D] = [ObjaverseDataset3D()]
 
@@ -48,7 +50,7 @@ for dir in [train_dir, test_dir, valid_dir]:
     for folder in ["diffuse", "uv"]:
         (OUTPUT_PATH / dir / folder).mkdir(parents=True, exist_ok=True)
 
-metadata = pd.DataFrame(columns=["uv_file_name", "diffuse_file_name", "caption", "split"])
+metadata = pd.DataFrame(columns=["uv_file_name", "diffuse_file_name", "caption", "mask", "split"])
 for dataset in datasets:
     valid_uids = dataset.statistics["valid"].index
     avail_uids = dataset.triplets
@@ -69,15 +71,22 @@ for dataset in datasets:
         diffuse = Image.open(diffuse_paths[uid])
         if diffuse.size[0] != diffuse.size[1]:
             continue
-        mask = np.unpackbits(np.load(mask_paths[uid])).reshape(1024, 1024)
+
+        mask_packed = np.load(mask_paths[uid])
+        mask = np.unpackbits(mask_packed).reshape(1024, 1024)
+        mask_compressed = zlib.compress(mask_packed.tobytes())
+        mask_base64 = base64.b64encode(mask_compressed).decode("utf-8")
+
         masked_diffuse = mask_image(diffuse, mask)
         if is_black(masked_diffuse, threshold=BLACK_TRESHOLD):
             continue
         masked_diffuse.save(OUTPUT_PATH / split / "diffuse" / f"{uid}.png")
+
         metadata.loc[-1] = [
             "uv/" + uv_paths[uid].name,
             "diffuse/" + diffuse_paths[uid].name,
             captions[uid],
+            mask_base64,
             split,
         ]
         metadata.index += 1

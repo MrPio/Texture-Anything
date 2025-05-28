@@ -80,7 +80,10 @@ def load_model(path: str, reset_scene: bool = True) -> list:
 
 def load_hdri(path: Path | str, rotation=0, strength=1):
     # Ensure use_nodes is enabled for the world
-    world = bpy.data.worlds["World"]
+    world = bpy.data.worlds.get("World")
+    if world is None:
+        world = bpy.data.worlds.new("World")
+    bpy.context.scene.world = world
     world.use_nodes = True
     nodes = world.node_tree.nodes
     links = world.node_tree.links
