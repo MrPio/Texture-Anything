@@ -4,28 +4,28 @@
 # - Accelerate's --num_processes=<NUM_GPUS>
 # - The name of the train in $OUTPUT_DIR
 # - A number of --epochs compatible with the logic batch size
-# - Wheter to use --use_pixel_space_loss
+# - Wheter to use --pixel_space_loss_weight
 
 #SBATCH --job-name=controlnet_sd15
 #SBATCH --output=controlnet_sd15.log
 #SBATCH --error=controlnet_sd15.log
-#SBATCH --time=10:00:00
+#SBATCH --time=14:00:00
 #SBATCH --partition=boost_usr_prod
 ##SBATCH --qos=boost_qos_dbg                  # Refer to https://wiki.u-gov.it/confluence/display/SCAIUS/Booster+Section
-#SBATCH --gres=gpu:2
-#SBATCH --mem=48G
+#SBATCH --gres=gpu:1
+#SBATCH --mem=42G
 
 export SD_MODEL="stable-diffusion-v1-5/stable-diffusion-v1-5"
 export CNET_MODEL="lllyasviel/sd-controlnet-mlsd"
 export CACHE_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/.huggingface"
 export DATASET_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/dataset"
 
-export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/trainings/SD1.5_CNmlsd_64bs_1e-5lr_8k_pixel-loss"
+export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/trainings/SD1.5_CNmlsd_64bs_1e-5lr_8k_combined-loss"
 
 cd /leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training
 
 # accelerate launch train_controlnet.py \
-accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet.py \
+accelerate launch --mixed_precision="fp16" --num_processes=1 train_controlnet.py \
     --pretrained_model_name_or_path=$SD_MODEL \
     --controlnet_model_name_or_path=$CNET_MODEL \
     --output_dir=$OUTPUT_DIR \
