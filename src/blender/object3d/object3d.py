@@ -36,15 +36,34 @@ class Object3D(abc.ABC):
 
         # Load model
         self.objects = load_model(str(self.path), reset_scene=True)
+        self.meshes = [x for x in self.objects if x.type == "MESH"]
+
+        # Remove non mesh objects
+        for obj in self.objects:
+            if obj not in self.meshes:
+                bpy.data.objects.remove(obj, do_unlink=True)
+        self.objects = self.meshes  # TODO remove self.objects
 
         # Center each object in the scene
         for obj in self.objects:
             bpy.context.view_layer.objects.active = obj
-            bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+            bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
             obj.location = (0.0, 0.0, 0.0)
 
+        # Normalize the size so that the max dimension is 1m
+        sizes = []
+        for obj in self.meshes:
+            # obj.bound_box returns a list of 8 corner axis-aligned points
+            bbox = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+            max_size = max((max(c[i] for c in bbox) - min(c[i] for c in bbox)) for i in range(3))
+            sizes.append(max_size)
+        if max(sizes) > 0:
+            for obj in self.meshes:
+                bpy.context.view_layer.objects.active = obj
+                obj.scale /= max(sizes)
+                bpy.ops.object.transform_apply(scale=True)
+
         # Extract meshes
-        self.meshes = [x for x in self.objects if x.type == "MESH"]
         self.has_one_mesh = len(self.meshes) == 1
         self.mesh = self.meshes[0]
 
@@ -253,7 +272,7 @@ class Object3D(abc.ABC):
 
     def render(
         self,
-        distance=1.5,
+        distance=1.15,
         samples=1,
         size=(512, 512),
         views=4,
@@ -263,13 +282,12 @@ class Object3D(abc.ABC):
         scene = bpy.context.scene
 
         # Add camera
-        scene.camera = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
+        camera = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
+        scene.collection.objects.link(camera)
+        scene.camera = camera
 
         # Setup light
         load_hdri(Object3D.HDRI_PATH, rotation=0, strength=light_strength)
-
-        if save_scene:
-            self.export(save_scene)
 
         # Configure render
         scene.render.film_transparent = True
@@ -278,12 +296,12 @@ class Object3D(abc.ABC):
         scene.render.resolution_x, scene.render.resolution_y = size
 
         # Launch rendering
-        radius = distance * max(1.0, self.mesh.dimensions.length)
+        radius = distance
         images = []
         if views < 1:
             return
         for ang in map(math.radians, tqdm(range(45, 45 + 360, 360 // views))):
-            scene.camera.location = Vector((radius * math.cos(ang), radius * math.sin(ang), 0.0))
+            scene.camera.location = Vector((radius * math.cos(ang), radius * math.sin(ang), radius * math.cos(ang//4)))
             scene.camera.rotation_euler = (
                 (Vector((0, 0, 0)) - scene.camera.location).to_track_quat("-Z", "Y").to_euler()
             )
@@ -295,6 +313,10 @@ class Object3D(abc.ABC):
             img = Image.open(path).convert("RGBA")
             images.append(img)
             os.remove(path)
+
+        if save_scene:
+            print(f"Saving scene to {save_scene}")
+            self.export(save_scene)
 
         return images
 

@@ -18,13 +18,6 @@ class ObjaverseObject3D(Object3D):
         super(ObjaverseObject3D, self).__init__(uid, path)
         self.dataset = ObjaverseDataset3D()
 
-        for mesh in self.objects:
-            if mesh != self.mesh:
-                bpy.data.objects.remove(mesh, do_unlink=True)
-        self.objects = [self.mesh]
-        self.meshes = [self.mesh]
-        self.has_one_mesh = True
-
     @property
     def textures(self) -> list[Image.Image]:
         """Unpack all the diffuse texture images in the scene as PIL"""
