@@ -3,7 +3,7 @@ Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse text
 This script is CWD-independent
 
 Usage:
-    $ srun -n 8 --mem=30G  --time=02:00:00 python 2-dataset_creation/generate_dataset.py --dataset="shapenetcore" --regenerate-uv --render
+    $ srun -n 8 --mem=30G  --time=04:00:00 python 2-dataset_creation/generate_dataset.py --dataset="shapenetcore" --regenerate-uv --render
 
 Author:
     Valerio Morelli - 2025-05-08

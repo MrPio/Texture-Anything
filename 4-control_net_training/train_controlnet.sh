@@ -25,7 +25,7 @@ export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control
 cd /leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training
 
 # accelerate launch train_controlnet.py \
-accelerate launch --mixed_precision="fp16" --num_processes=1 train_controlnet.py \
+accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet.py \
     --pretrained_model_name_or_path=$SD_MODEL \
     --controlnet_model_name_or_path=$CNET_MODEL \
     --output_dir=$OUTPUT_DIR \
