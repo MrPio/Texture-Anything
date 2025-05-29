@@ -6,49 +6,41 @@
 # - A number of --epochs compatible with the logic batch size
 # - Wheter to use --pixel_space_loss_weight
 
-#SBATCH --job-name=controlnet_sd15
-#SBATCH --output=controlnet_sd15.log
-#SBATCH --error=controlnet_sd15.log
+#SBATCH --job-name=controlnet_sdxl
+#SBATCH --output=controlnet_sdxl.log
+#SBATCH --error=controlnet_sdxl.log
 #SBATCH --time=12:00:00
 #SBATCH --partition=boost_usr_prod
 ##SBATCH --qos=boost_qos_dbg                  # Refer to https://wiki.u-gov.it/confluence/display/SCAIUS/Booster+Section
 #SBATCH --gres=gpu:2
 #SBATCH --mem=42G
 
-export SD_MODEL="stable-diffusion-v1-5/stable-diffusion-v1-5"
-export CNET_MODEL="lllyasviel/sd-controlnet-mlsd"
+export SD_MODEL="stabilityai/stable-diffusion-xl-base-1.0"
+
 export CACHE_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/.huggingface"
 export DATASET_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/dataset"
-
 export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/trainings/SD1.5_CNmlsd_64bs_1e-5lr_8k_combined-loss"
 
-cd /leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training
-
-# accelerate launch train_controlnet.py \
-accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet.py \
+accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet_sdxl.py \
     --pretrained_model_name_or_path=$SD_MODEL \
-    --controlnet_model_name_or_path=$CNET_MODEL \
     --output_dir=$OUTPUT_DIR \
     --cache_dir=$CACHE_DIR \
     --train_data_dir=$DATASET_DIR \
     --image_column="diffuse" \
     --mask_column="mask" \
     --conditioning_image_column="uv" \
-    --caption_column="caption" \
     --invert_conditioning_image \
     \
     --pixel_space_loss_weight=0.5 \
     \
-    --resolution=512 \
+    --resolution=1024 \
     --num_train_epochs=60 \
     --learning_rate=1e-5 \
-    --train_batch_size=8 \
+    --train_batch_size=1 \
     --gradient_accumulation_steps=4 \
     --mixed_precision="fp16" \
-    --checkpointing_steps=500 \
-    --validation_steps=250 \
+    --validation_steps=150 \
     --seed=42 \
-    \
     --validation_image \
     "dataset/validation/uv/0adf456c59094a3da23329a6d27cb239.png" \
     "dataset/validation/uv/3b15c410f87f42daa7e8cb5b5f74e3f1.png" \
