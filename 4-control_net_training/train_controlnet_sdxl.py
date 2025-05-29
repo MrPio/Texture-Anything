@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright 2025 The HuggingFace Inc. team. All rights reserved.
@@ -82,14 +81,15 @@ def log_validation(vae, unet, controlnet, args, accelerator, weight_dtype, step,
             revision=args.revision,
             variant=args.variant,
             torch_dtype=weight_dtype,
+            cache_dir=args.cache_dir,
         )
     else:
-        controlnet = ControlNetModel.from_pretrained(args.output_dir, torch_dtype=weight_dtype)
+        controlnet = ControlNetModel.from_pretrained(args.output_dir, torch_dtype=weight_dtype,cache_dir=args.cache_dir,)
         if args.pretrained_vae_model_name_or_path is not None:
-            vae = AutoencoderKL.from_pretrained(args.pretrained_vae_model_name_or_path, torch_dtype=weight_dtype)
+            vae = AutoencoderKL.from_pretrained(args.pretrained_vae_model_name_or_path, torch_dtype=weight_dtype,cache_dir=args.cache_dir,)
         else:
             vae = AutoencoderKL.from_pretrained(
-                args.pretrained_model_name_or_path, subfolder="vae", torch_dtype=weight_dtype
+                args.pretrained_model_name_or_path, subfolder="vae", torch_dtype=weight_dtype,cache_dir=args.cache_dir,
             )
 
         pipeline = StableDiffusionXLControlNetPipeline.from_pretrained(
@@ -99,6 +99,7 @@ def log_validation(vae, unet, controlnet, args, accelerator, weight_dtype, step,
             revision=args.revision,
             variant=args.variant,
             torch_dtype=weight_dtype,
+            cache_dir=args.cache_dir,
         )
 
     pipeline.scheduler = UniPCMultistepScheduler.from_config(pipeline.scheduler.config)
@@ -213,7 +214,7 @@ def import_model_class_from_model_name_or_path(
     pretrained_model_name_or_path: str, revision: str, subfolder: str = "text_encoder"
 ):
     text_encoder_config = PretrainedConfig.from_pretrained(
-        pretrained_model_name_or_path, subfolder=subfolder, revision=revision
+        pretrained_model_name_or_path, subfolder=subfolder, revision=revision,cache_dir=args.cache_dir,
     )
     model_class = text_encoder_config.architectures[0]
 
@@ -888,12 +889,14 @@ def main(args):
         subfolder="tokenizer",
         revision=args.revision,
         use_fast=False,
+        cache_dir=args.cache_dir,
     )
     tokenizer_two = AutoTokenizer.from_pretrained(
         args.pretrained_model_name_or_path,
         subfolder="tokenizer_2",
         revision=args.revision,
         use_fast=False,
+        cache_dir=args.cache_dir,
     )
 
     # import correct text encoder classes
@@ -905,12 +908,24 @@ def main(args):
     )
 
     # Load scheduler and models
-    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
+    noise_scheduler = DDPMScheduler.from_pretrained(
+        args.pretrained_model_name_or_path,
+        subfolder="scheduler",
+        cache_dir=args.cache_dir,
+    )
     text_encoder_one = text_encoder_cls_one.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision, variant=args.variant
+        args.pretrained_model_name_or_path,
+        subfolder="text_encoder",
+        revision=args.revision,
+        variant=args.variant,
+        cache_dir=args.cache_dir,
     )
     text_encoder_two = text_encoder_cls_two.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="text_encoder_2", revision=args.revision, variant=args.variant
+        args.pretrained_model_name_or_path,
+        subfolder="text_encoder_2",
+        revision=args.revision,
+        variant=args.variant,
+        cache_dir=args.cache_dir,
     )
     vae_path = (
         args.pretrained_model_name_or_path
@@ -922,14 +937,22 @@ def main(args):
         subfolder="vae" if args.pretrained_vae_model_name_or_path is None else None,
         revision=args.revision,
         variant=args.variant,
+        cache_dir=args.cache_dir,
     )
     unet = UNet2DConditionModel.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision, variant=args.variant
+        args.pretrained_model_name_or_path,
+        subfolder="unet",
+        revision=args.revision,
+        variant=args.variant,
+        cache_dir=args.cache_dir,
     )
 
     if args.controlnet_model_name_or_path:
         logger.info("Loading existing controlnet weights")
-        controlnet = ControlNetModel.from_pretrained(args.controlnet_model_name_or_path)
+        controlnet = ControlNetModel.from_pretrained(
+            args.controlnet_model_name_or_path,
+            cache_dir=args.cache_dir,
+        )
     else:
         logger.info("Initializing controlnet weights from unet")
         controlnet = ControlNetModel.from_unet(unet)
@@ -961,7 +984,7 @@ def main(args):
                 model = models.pop()
 
                 # load diffusers style into model
-                load_model = ControlNetModel.from_pretrained(input_dir, subfolder="controlnet")
+                load_model = ControlNetModel.from_pretrained(input_dir, subfolder="controlnet",cache_dir=args.cache_dir,)
                 model.register_to_config(**load_model.config)
 
                 model.load_state_dict(load_model.state_dict())
