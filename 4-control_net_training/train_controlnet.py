@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 
+from .utils import masked_mse_loss
 import argparse
 import base64
 import contextlib
@@ -780,23 +781,6 @@ def collate_fn(examples):
     }
 
 
-def masked_mse_loss(pred, targ, mask):
-    """Compute the masked MSE loss
-
-    Args:
-        pred (torch.tensor): CNet output, shape=(N, C, W, H)
-        targ (torch.tensor): Ground truth, shape=(N, C, W, H)
-        mask (torch.tensor): UV mask, shape=(N, W, H)
-    """
-    _, channels, _, _ = pred.shape
-    # Repeat the channels (the mask is B/W)
-    mask = mask.float().unsqueeze(1).repeat(1, channels, 1, 1)
-    # Resize the mask to args.resolution
-    mask = F.interpolate(mask, size=pred.shape[2:], mode="nearest")
-    loss_elems = (F.mse_loss(pred.float(), targ.float(), reduction="none")) * mask
-    return loss_elems.sum() / (mask.sum() + 1e-6)
-
-
 def main(args):
     if args.report_to == "wandb" and args.hub_token is not None:
         raise ValueError(
@@ -1205,6 +1189,7 @@ def main(args):
                     mask=mask,
                 )
                 # ===========================================
+
                 alpha = args.pixel_space_loss_weight
                 accelerator.backward(latent_loss * (1 - alpha) + pixel_loss * alpha)
                 if accelerator.sync_gradients:
