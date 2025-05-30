@@ -14,19 +14,9 @@
 
 dataset/objaverse/0-annotations.pkl
 dataset/objaverse/1-annotations_filtered.parquet
-dataset/objaverse/objects/**
-dataset/objaverse/diffuse/**
-dataset/objaverse/diffuse2/**
-dataset/objaverse/uv/**
-dataset/objaverse/uv2/**
-dataset/objaverse/mask/**
-dataset/objaverse_bkp/
-dataset/objaverse/render/**
-dataset/shapenetcore/objects/**
-dataset/shapenetcore/diffuse/**
-dataset/shapenetcore/uv/**
-dataset/shapenetcore/render/**
-dataset/shapenetcore/mask/**
+dataset/objaverse/**
+dataset/objaverse_bkp/**
+dataset/shapenetcore/**
 
 4-control_net_training/dataset/train/**/
 4-control_net_training/dataset/train/metadata.csv
@@ -34,3 +24,4 @@ dataset/shapenetcore/mask/**
 controlnet_sd15.log
 4-control_net_training/dataset.zip
 4-control_net_training/diffusers/
+controlnet_sdxl.log

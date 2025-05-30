@@ -1,3 +1,5 @@
+import torch.nn.functional as F
+
 def masked_mse_loss(pred, targ, mask):
     """Compute the masked MSE loss
 

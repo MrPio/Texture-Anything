@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 
-from .utils import masked_mse_loss
+from utils import masked_mse_loss
 import argparse
 import base64
 import contextlib

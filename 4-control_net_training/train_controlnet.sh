@@ -11,7 +11,7 @@
 #SBATCH --error=controlnet_sd15.log
 #SBATCH --time=12:00:00
 #SBATCH --partition=boost_usr_prod
-##SBATCH --qos=boost_qos_dbg                  # Refer to https://wiki.u-gov.it/confluence/display/SCAIUS/Booster+Section
+##SBATCH --qos=boost_qos_dbg
 #SBATCH --gres=gpu:2
 #SBATCH --mem=42G
 

@@ -13,7 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 
+from utils import masked_mse_loss
 import argparse
+import base64
 import functools
 import gc
 import logging
@@ -23,7 +25,9 @@ import random
 import shutil
 from contextlib import nullcontext
 from pathlib import Path
+import zlib
 
+import PIL
 import accelerate
 import numpy as np
 import torch
@@ -84,12 +88,23 @@ def log_validation(vae, unet, controlnet, args, accelerator, weight_dtype, step,
             cache_dir=args.cache_dir,
         )
     else:
-        controlnet = ControlNetModel.from_pretrained(args.output_dir, torch_dtype=weight_dtype,cache_dir=args.cache_dir,)
+        controlnet = ControlNetModel.from_pretrained(
+            args.output_dir,
+            torch_dtype=weight_dtype,
+            cache_dir=args.cache_dir,
+        )
         if args.pretrained_vae_model_name_or_path is not None:
-            vae = AutoencoderKL.from_pretrained(args.pretrained_vae_model_name_or_path, torch_dtype=weight_dtype,cache_dir=args.cache_dir,)
+            vae = AutoencoderKL.from_pretrained(
+                args.pretrained_vae_model_name_or_path,
+                torch_dtype=weight_dtype,
+                cache_dir=args.cache_dir,
+            )
         else:
             vae = AutoencoderKL.from_pretrained(
-                args.pretrained_model_name_or_path, subfolder="vae", torch_dtype=weight_dtype,cache_dir=args.cache_dir,
+                args.pretrained_model_name_or_path,
+                subfolder="vae",
+                torch_dtype=weight_dtype,
+                cache_dir=args.cache_dir,
             )
 
         pipeline = StableDiffusionXLControlNetPipeline.from_pretrained(
@@ -136,6 +151,8 @@ def log_validation(vae, unet, controlnet, args, accelerator, weight_dtype, step,
 
     for validation_prompt, validation_image in zip(validation_prompts, validation_images):
         validation_image = Image.open(validation_image).convert("RGB")
+        if args.invert_conditioning_image:
+            validation_image = PIL.ImageOps.invert(validation_image)
 
         try:
             interpolation = getattr(transforms.InterpolationMode, args.image_interpolation_mode.upper())
@@ -214,7 +231,10 @@ def import_model_class_from_model_name_or_path(
     pretrained_model_name_or_path: str, revision: str, subfolder: str = "text_encoder"
 ):
     text_encoder_config = PretrainedConfig.from_pretrained(
-        pretrained_model_name_or_path, subfolder=subfolder, revision=revision,cache_dir=args.cache_dir,
+        pretrained_model_name_or_path,
+        subfolder=subfolder,
+        revision=revision,
+        cache_dir=args.cache_dir,
     )
     model_class = text_encoder_config.architectures[0]
 
@@ -538,6 +558,26 @@ def parse_args(input_args=None):
         default="conditioning_image",
         help="The column of the dataset containing the controlnet conditioning image.",
     )
+    # Added by us:
+    parser.add_argument(
+        "--pixel_space_loss_weight",
+        type=float,
+        default=0.5,
+        help="the coefficient of the weighted sum between the latent MSE loss and the pixel-space MSE loss. A value of 0 indicates that only the former loss is used. Discard pixel loss if alpha is 0",
+    )
+    # Added by us:
+    parser.add_argument(
+        "--invert_conditioning_image",
+        action="store_true",
+        help="Whether to invert the color of the condition image. Useful when control images are UV maps and the CNet is loaded from a pretrained mlsd checkpoint.",
+    )
+    # Added by us:
+    parser.add_argument(
+        "--mask_column",
+        type=str,
+        default="mask",
+        help="The column of the dataset containing the ground truth 1024x1024 masks.",
+    )
     parser.add_argument(
         "--caption_column",
         type=str,
@@ -793,10 +833,22 @@ def prepare_train_dataset(dataset, accelerator):
         images = [image.convert("RGB") for image in examples[args.image_column]]
         images = [image_transforms(image) for image in images]
 
+        def decode_mask(mask: str) -> torch.Tensor:
+            mask_compressed = base64.b64decode(mask)
+            mask_decompressed = zlib.decompress(mask_compressed)
+            mask_packed = np.frombuffer(mask_decompressed, dtype=np.uint8)
+            mask_npy = np.unpackbits(mask_packed).reshape(1024, 1024)
+            return torch.from_numpy(mask_npy)
+
+        masks = [decode_mask(mask) for mask in examples[args.mask_column]]
+
         conditioning_images = [image.convert("RGB") for image in examples[args.conditioning_image_column]]
+        if args.invert_conditioning_image:
+            conditioning_images = [PIL.ImageOps.invert(image) for image in conditioning_images]
         conditioning_images = [conditioning_image_transforms(image) for image in conditioning_images]
 
         examples["pixel_values"] = images
+        examples["mask_values"] = masks
         examples["conditioning_pixel_values"] = conditioning_images
 
         return examples
@@ -811,6 +863,9 @@ def collate_fn(examples):
     pixel_values = torch.stack([example["pixel_values"] for example in examples])
     pixel_values = pixel_values.to(memory_format=torch.contiguous_format).float()
 
+    mask_values = torch.stack([example["mask_values"] for example in examples])
+    mask_values = mask_values.to(memory_format=torch.contiguous_format).float()
+
     conditioning_pixel_values = torch.stack([example["conditioning_pixel_values"] for example in examples])
     conditioning_pixel_values = conditioning_pixel_values.to(memory_format=torch.contiguous_format).float()
 
@@ -822,6 +877,7 @@ def collate_fn(examples):
     return {
         "pixel_values": pixel_values,
         "conditioning_pixel_values": conditioning_pixel_values,
+        "mask_values": mask_values,
         "prompt_ids": prompt_ids,
         "unet_added_conditions": {"text_embeds": add_text_embeds, "time_ids": add_time_ids},
     }
@@ -984,7 +1040,11 @@ def main(args):
                 model = models.pop()
 
                 # load diffusers style into model
-                load_model = ControlNetModel.from_pretrained(input_dir, subfolder="controlnet",cache_dir=args.cache_dir,)
+                load_model = ControlNetModel.from_pretrained(
+                    input_dir,
+                    subfolder="controlnet",
+                    cache_dir=args.cache_dir,
+                )
                 model.register_to_config(**load_model.config)
 
                 model.load_state_dict(load_model.state_dict())
@@ -1303,9 +1363,30 @@ def main(args):
                     target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
-                loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                latent_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
-                accelerator.backward(loss)
+                # ========== NEW: Pixel-space loss ==========
+                alpha = args.pixel_space_loss_weight
+                if alpha > 1e-6:
+                    # Restore z0
+                    alpha_bar = noise_scheduler.alphas_cumprod[timesteps].reshape(-1, 1, 1, 1).to(latents.device)
+                    z0_pred = (noisy_latents - (1 - alpha_bar).sqrt() * model_pred) / alpha_bar.sqrt()
+
+                    # Decode latent image
+                    recon_images = vae.decode((z0_pred / vae.config.scaling_factor).to(pixel_values.dtype)).sample
+
+                    # Calculate pixel loss between reconstructed image and ground truth
+                    mask = batch["mask_values"]
+                    pixel_loss = masked_mse_loss(
+                        pred=recon_images.float(),
+                        targ=batch["pixel_values"].to(recon_images.device).float(),
+                        mask=mask,
+                    )
+                    # ===========================================
+                    accelerator.backward(latent_loss * (1 - alpha) + pixel_loss * alpha)
+                else:
+                    accelerator.backward(latent_loss)
+
                 if accelerator.sync_gradients:
                     params_to_clip = controlnet.parameters()
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
@@ -1356,7 +1437,15 @@ def main(args):
                             step=global_step,
                         )
 
-            logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+            # logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+            logs = {
+                "latent_loss": latent_loss.detach().item(),
+                "pixel_loss": pixel_loss.detach().item() if alpha > 1e-6 else 0,
+                "lr": lr_scheduler.get_last_lr()[0],
+            }
+            if alpha <= 1e-6:
+                logs.pop("pixel_loss")
+
             progress_bar.set_postfix(**logs)
             accelerator.log(logs, step=global_step)
 
