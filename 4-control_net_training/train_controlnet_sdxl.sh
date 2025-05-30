@@ -41,8 +41,8 @@ accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet_sd
     --resolution=512 \
     --num_train_epochs=50 \
     --learning_rate=1e-5 \
-    --train_batch_size=4 \
-    --gradient_accumulation_steps=4 \
+    --train_batch_size=8 \
+    --gradient_accumulation_steps=2 \
     --mixed_precision="fp16" \
     --checkpointing_steps=1000 \
     --validation_steps=200 \

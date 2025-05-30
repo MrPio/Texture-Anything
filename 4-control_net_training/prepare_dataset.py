@@ -18,14 +18,14 @@ from src import *
 MAX_DATASET_SIZE = None  # 1_000
 TESTSET_SIZE = 50  # diffusers train script doesn't use a test set
 BLACK_TRESHOLD = 0.66
-OUTPUT_PATH = Path(FILE_DIR / "dataset").resolve()
+OUTPUT_PATH = Path(FILE_DIR / "dataset_shapenetcore").resolve()
 VALIDATION_UIDS = [
-    "0adf456c59094a3da23329a6d27cb239",
-    "3b15c410f87f42daa7e8cb5b5f74e3f1",
+    "1305b9266d38eb4d9f818dd0aa1a251", #"0adf456c59094a3da23329a6d27cb239",
+    "1de679dd26d8c69cae44c65a6d0f0732", #"3b15c410f87f42daa7e8cb5b5f74e3f1",
 ]
 TEST_UIDS = [x.stem for x in test_dir.glob("*")] if (test_dir := OUTPUT_PATH / "test" / "uv").exists() else None
 
-datasets: list[Dataset3D] = [ObjaverseDataset3D()]
+datasets: list[Dataset3D] = [ShapeNetCoreDataset3D()]
 
 
 def mask_image(image: Image.Image, mask: np.ndarray) -> Image.Image:
