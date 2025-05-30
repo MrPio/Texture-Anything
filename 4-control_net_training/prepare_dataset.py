@@ -20,8 +20,8 @@ TESTSET_SIZE = 50  # diffusers train script doesn't use a test set
 BLACK_TRESHOLD = 0.66
 OUTPUT_PATH = Path(FILE_DIR / "dataset_shapenetcore").resolve()
 VALIDATION_UIDS = [
-    "1305b9266d38eb4d9f818dd0aa1a251", #"0adf456c59094a3da23329a6d27cb239",
-    "1de679dd26d8c69cae44c65a6d0f0732", #"3b15c410f87f42daa7e8cb5b5f74e3f1",
+    "1305b9266d38eb4d9f818dd0aa1a251",  # "0adf456c59094a3da23329a6d27cb239",
+    "1de679dd26d8c69cae44c65a6d0f0732",  # "3b15c410f87f42daa7e8cb5b5f74e3f1",
 ]
 TEST_UIDS = [x.stem for x in test_dir.glob("*")] if (test_dir := OUTPUT_PATH / "test" / "uv").exists() else None
 
@@ -44,6 +44,7 @@ def is_black(img: Image.Image, threshold=0.9):
     return ratio > threshold
 
 
+conv_filter = SobelFilter()
 train_dir, test_dir, valid_dir = "train", "test", "validation"
 for dir in [train_dir, test_dir, valid_dir]:
     rmtree(OUTPUT_PATH / dir, ignore_errors=True)
@@ -67,7 +68,6 @@ for dataset in datasets:
 
     for uid in tqdm(uids):
         split = test_dir if uid in test_uids else valid_dir if uid in VALIDATION_UIDS else train_dir
-        copy(uv_paths[uid], OUTPUT_PATH / split / "uv")
         diffuse = Image.open(diffuse_paths[uid])
         if diffuse.size[0] != diffuse.size[1]:
             continue
@@ -78,9 +78,10 @@ for dataset in datasets:
         mask_base64 = base64.b64encode(mask_compressed).decode("utf-8")
 
         masked_diffuse = mask_image(diffuse, mask)
-        if is_black(masked_diffuse, threshold=BLACK_TRESHOLD):
+        if is_black(masked_diffuse, threshold=BLACK_TRESHOLD) or not conv_filter.is_homogeneous(masked_diffuse):
             continue
         masked_diffuse.save(OUTPUT_PATH / split / "diffuse" / f"{uid}.png")
+        copy(uv_paths[uid], OUTPUT_PATH / split / "uv")
 
         metadata.loc[-1] = [
             "uv/" + uv_paths[uid].name,

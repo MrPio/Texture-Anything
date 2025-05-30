@@ -2,6 +2,7 @@ from abc import ABC
 from functools import cached_property
 from scipy.signal import convolve2d
 import numpy as np
+from PIL import Image
 
 
 class Filter(ABC):
@@ -9,14 +10,16 @@ class Filter(ABC):
         self.filters = filters
         self.threshold = threshold
 
-    def __call__(self, array) -> np.ndarray:
-        convolved = [convolve2d(array, filter, mode="same", boundary="symm") ** 2 for filter in self.filters]
+    def __call__(self, image) -> np.ndarray:
+        if issubclass(image, Image.Image):
+            image = np.array(image.convert("L"), dtype=np.float32)
+        convolved = [convolve2d(image, filter, mode="same", boundary="symm") ** 2 for filter in self.filters]
         convolved = np.sqrt(np.sum(convolved, axis=(0)))
         return np.mean(convolved), convolved
 
     @cached_property
-    def is_homogeneous(self) -> bool:
-        self()[0] < self.threshold
+    def is_homogeneous(self, image) -> bool:
+        self(image)[0] < self.threshold
 
 
 class SobelFilter(Filter):
