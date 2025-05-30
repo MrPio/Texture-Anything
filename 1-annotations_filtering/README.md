@@ -10,3 +10,4 @@ We use _Objaverse 1.0_ (~800,000 objects) instead of Objaverse XL (~8,000,000 ob
 We retrieve the annotations, remove unnecessary columns, and select one thumbnail per sample.
 
 Finally, we filter the dataset by face count, reducing it to ~80,000 objects.
+

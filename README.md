@@ -2,11 +2,11 @@
 
 Blender plugin to generate texture using StableDiffusion+ControlNet. The conditioning is on the UV map.
 
-## 📦 TL;DR
+## 📌 TL;DR
 
 The goal of this project is to train a ControlNet on UV conditioning in order to generate textures for a model given its UV map. The dataset is a mix of Objaverse and [ShapeNetCore](https://huggingface.co/datasets/ShapeNet/ShapeNetCore) and each sample is a triplet of _caption_, _uv map_ baked as image and _diffuse_ texture as ground truth.
 
-## 📌 How this repository is structured
+## 📦 How this repository is structured
 
 The repository is structured in cronological sections, each containing several jupyter notebooks. The `src` module holds the recurrent code.
 
