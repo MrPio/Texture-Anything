@@ -44,10 +44,8 @@ def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str 
 
 
 def compute_image_density(img: Image.Image, threshold=0) -> float:
-    """Get the fraction of non-transparent pixels of an image. Can be used to determine how dense a UV map is."""
-    # Ensure image is in RGBA mode
-    img = img.convert("RGBA")
-    pixels = img.getdata()
+    """Compute the fraction of non-transparent pixels of an image. Can be used to determine how dense a UV map is."""
+    pixels = img.convert("RGBA").getdata()
     non_transparent = sum(1 for px in pixels if px[3] > threshold)
 
     return non_transparent / len(pixels)
@@ -75,42 +73,16 @@ def is_textured(mesh):
 
 
 def is_white(obj):
+    """Has the `obj` a default white material? Used to prune irrelevant objects in shapenetcore"""
     for slot in obj.material_slots:
         mat = slot.material
         if not mat or not mat.use_nodes:
             continue
-        
+
         for node in mat.node_tree.nodes:
-            if node.type == 'BSDF_PRINCIPLED':
-                color = node.inputs['Base Color'].default_value
+            if node.type == "BSDF_PRINCIPLED":
+                color = node.inputs["Base Color"].default_value
                 # Check if RGB is exactly white (ignore alpha)
                 if tuple(color[:3]) == (1.0, 1.0, 1.0):
                     return True
     return False
-
-
-def binary_mask_tensor(image_path: str) -> torch.Tensor:
-    """
-    Load a 1-bit black-and-white image and convert it to a PyTorch mask tensor.
-
-    Each pixel in the input image:
-      - Black  (pixel value == 0)   → mask value = 1
-      - White  (pixel value == 255) → mask value = 0
-
-    Returns:
-      A torch.Tensor of shape (1, H, W), dtype=torch.uint8, with values {0,1}.
-    """
-    # Open image and convert to 1-bit BW: pixels are either 0 (black) or 255 (white)
-    pil_mask = Image.open(image_path).convert("1")
-
-    # Create a NumPy array from the PIL image: shape (H, W), values in {0,255}
-    arr = np.array(pil_mask)
-
-    # Build a binary array: black→1, white→0
-    binary = (arr == 0).astype(np.uint8)
-
-    # Convert to a PyTorch tensor and add channel dimension
-    mask_tensor = torch.from_numpy(binary)
-    mask_tensor = mask_tensor.unsqueeze(0)  # shape → (1, H, W)
-
-    return mask_tensor
