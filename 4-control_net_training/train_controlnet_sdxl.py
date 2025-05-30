@@ -1363,29 +1363,15 @@ def main(args):
                     target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
-                latent_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
-                # ========== NEW: Pixel-space loss ==========
-                alpha = args.pixel_space_loss_weight
-                if alpha > 1e-6:
-                    # Restore z0
-                    alpha_bar = noise_scheduler.alphas_cumprod[timesteps].reshape(-1, 1, 1, 1).to(latents.device)
-                    z0_pred = (noisy_latents - (1 - alpha_bar).sqrt() * model_pred) / alpha_bar.sqrt()
+                # latent_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                loss = masked_mse_loss(
+                    pred=model_pred.float(),
+                    targ=target.float(),
+                    mask=batch["mask_values"],
+                )
 
-                    # Decode latent image
-                    recon_images = vae.decode((z0_pred / vae.config.scaling_factor).to(pixel_values.dtype)).sample
-
-                    # Calculate pixel loss between reconstructed image and ground truth
-                    mask = batch["mask_values"]
-                    pixel_loss = masked_mse_loss(
-                        pred=recon_images.float(),
-                        targ=batch["pixel_values"].to(recon_images.device).float(),
-                        mask=mask,
-                    )
-                    # ===========================================
-                    accelerator.backward(latent_loss * (1 - alpha) + pixel_loss * alpha)
-                else:
-                    accelerator.backward(latent_loss)
+                accelerator.backward(loss)
 
                 if accelerator.sync_gradients:
                     params_to_clip = controlnet.parameters()
@@ -1437,14 +1423,10 @@ def main(args):
                             step=global_step,
                         )
 
-            # logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             logs = {
-                "latent_loss": latent_loss.detach().item(),
-                "pixel_loss": pixel_loss.detach().item() if alpha > 1e-6 else 0,
+                "loss": loss.detach().item(),
                 "lr": lr_scheduler.get_last_lr()[0],
             }
-            if alpha <= 1e-6:
-                logs.pop("pixel_loss")
 
             progress_bar.set_postfix(**logs)
             accelerator.log(logs, step=global_step)

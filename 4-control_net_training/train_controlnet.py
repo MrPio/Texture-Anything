@@ -1171,27 +1171,34 @@ def main(args):
                     target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
-                latent_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
 
-                # ========== NEW: Pixel-space loss ==========
-                # Restore z0
-                alpha_bar = noise_scheduler.alphas_cumprod[timesteps].reshape(-1, 1, 1, 1).to(latents.device)
-                z0_pred = (noisy_latents - (1 - alpha_bar).sqrt() * model_pred) / alpha_bar.sqrt()
-
-                # Decode latent image
-                recon_images = vae.decode((z0_pred / vae.config.scaling_factor).to(noisy_latents.dtype)).sample
-
-                # Calculate pixel loss between reconstructed image and ground truth
-                mask = batch["mask_values"]
-                pixel_loss = masked_mse_loss(
-                    pred=recon_images.float(),
-                    targ=batch["pixel_values"].to(recon_images.device).float(),
-                    mask=mask,
+                # latent_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                loss = masked_mse_loss(
+                    pred=model_pred.float(),
+                    targ=target.float(),
+                    mask=batch["mask_values"],
                 )
-                # ===========================================
 
-                alpha = args.pixel_space_loss_weight
-                accelerator.backward(latent_loss * (1 - alpha) + pixel_loss * alpha)
+                # # ========== NEW: Pixel-space loss ==========
+                # # Restore z0
+                # alpha_bar = noise_scheduler.alphas_cumprod[timesteps].reshape(-1, 1, 1, 1).to(latents.device)
+                # z0_pred = (noisy_latents - (1 - alpha_bar).sqrt() * model_pred) / alpha_bar.sqrt()
+
+                # # Decode latent image
+                # recon_images = vae.decode((z0_pred / vae.config.scaling_factor).to(noisy_latents.dtype)).sample
+
+                # # Calculate pixel loss between reconstructed image and ground truth
+                # mask = batch["mask_values"]
+                # pixel_loss = masked_mse_loss(
+                #     pred=recon_images.float(),
+                #     targ=batch["pixel_values"].to(recon_images.device).float(),
+                #     mask=mask,
+                # )
+                # # ===========================================
+                # alpha = args.pixel_space_loss_weight
+                # accelerator.backward(latent_loss * (1 - alpha) + pixel_loss * alpha)
+
+                accelerator.backward(loss)
                 if accelerator.sync_gradients:
                     params_to_clip = controlnet.parameters()
                     accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
@@ -1245,8 +1252,9 @@ def main(args):
 
             # logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             logs = {
-                "latent_loss": latent_loss.detach().item(),
-                "pixel_loss": pixel_loss.detach().item(),
+                # "latent_loss": latent_loss.detach().item(),
+                # "pixel_loss": pixel_loss.detach().item(),
+                "loss": loss.detach().item(),
                 "lr": lr_scheduler.get_last_lr()[0],
             }
             progress_bar.set_postfix(**logs)
