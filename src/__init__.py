@@ -19,6 +19,9 @@ datasets: dict[str, type[Dataset3D]] = {
     "shapenetcore": ShapeNetCoreDataset3D,
 }
 
+# Filters
+from .filter import SobelFilter, PrewittFilter, LaplacianFilter
+
 # Misc
 from .utils import plot_images, compute_image_density, is_textured
 from .logger import log, cprint
