@@ -2,10 +2,12 @@
 Generate predictions over the testset. CWD-independent.
 
 Usage:
-    $ srun --mem=16G --gres=gpu:1 --time=00:08:00 --partition=boost_usr_prod --qos=boost_qos_dbg \
+    $ srun --mem=24G --gres=gpu:1 --time=00:08:00 --partition=boost_usr_prod --qos=boost_qos_dbg \
         python infer_controlnet.py \
-            --cnet="SD1.5_CNmlsd_64bs_1e-5lr_8k_combined-loss" \
-            --checkpoint=7000
+            --sd="stabilityai/stable-diffusion-xl-base-1.0" \
+            --cnet="SD1xl_CN_32bs_1e-5lr_8k_latent-loss" \
+            --checkpoint=7000 \
+            --no-invert-uv
             
 Based on: https://github.com/huggingface/diffusers/tree/main/examples/controlnet
 """
@@ -13,6 +15,7 @@ Based on: https://github.com/huggingface/diffusers/tree/main/examples/controlnet
 import argparse
 from pathlib import Path
 import sys
+from time import sleep
 import pandas as pd
 
 ROOT_DIR = Path(__file__).parents[1]
@@ -44,14 +47,14 @@ def parse_args():
     )
     parser.add_argument(
         "--invert-uv",
-        type=bool,
+        action=argparse.BooleanOptionalAction,
         default=True,
         help="Whether to invert the color of the UV images.",
     )
     parser.add_argument(
         "--samples",
         type=int,
-        default=50,
+        default=30,
         help="The number of samples to consider in the test set.",
     )
     parser.add_argument(
@@ -70,8 +73,9 @@ def parse_args():
         / (args.cnet.replace("/", "-") + (f"_{args.checkpoint}s" if args.checkpoint else ""))
     )
     if output_dir.exists():
-        raise ValueError("This model already has prediction in", output_dir)
-
+        print("WARNING: This model already has prediction in", output_dir, "You have 5 seconds to abort...")
+        sleep(5)
+    print("args.invert_uv=", args.invert_uv)
     return args
 
 

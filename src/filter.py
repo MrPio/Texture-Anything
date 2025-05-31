@@ -11,7 +11,7 @@ class Filter(ABC):
         self.threshold = threshold
 
     def __call__(self, image) -> np.ndarray:
-        if issubclass(image, Image.Image):
+        if issubclass(type(image), Image.Image):
             image = np.array(image.convert("L"), dtype=np.float32)
         convolved = [convolve2d(image, filter, mode="same", boundary="symm") ** 2 for filter in self.filters]
         convolved = np.sqrt(np.sum(convolved, axis=(0)))
