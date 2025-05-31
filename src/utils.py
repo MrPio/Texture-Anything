@@ -8,7 +8,11 @@ import matplotlib.pyplot as plt
 import bpy
 
 
-def imshow(images: list[Image.Image | str | Path] | dict[Image.Image | str | Path], size=3, cols: int = None):
+def imshow(
+    images: list[Image.Image | np.ndarray | str | Path] | dict[Image.Image | np.ndarray | str | Path],
+    size=3,
+    cols: int = None,
+):
     """Plot a list of PIL images in a grid
 
     Args:
@@ -16,12 +20,15 @@ def imshow(images: list[Image.Image | str | Path] | dict[Image.Image | str | Pat
         size (int, optional): the size in inch of the images
         col (int, optional): The number of columns of the grid. Defaults to 1.
     """
-    images=list(images)
-    if not images:
-        return
+    if isinstance(images, (Image.Image, str, Path, np.ndarray)):
+        images = [images]
     titles = None
     if isinstance(images, dict):
         titles, images = list(images.keys()), list(images.values())
+    else:
+        images = list(images)
+        if not images:
+            return
     for i in range(len(images)):
         if not isinstance(images[i], (Image.Image, np.ndarray)):
             images[i] = Image.open(images[i])

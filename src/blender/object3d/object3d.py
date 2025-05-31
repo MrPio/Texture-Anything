@@ -10,7 +10,7 @@ from typing import Literal, Optional
 from tqdm import tqdm
 import numpy as np
 from ..scene import load_hdri, load_model
-from ...utils import is_outside_uv, plot_images
+from ...utils import imshow, is_outside_uv
 import bpy
 from PIL import Image, ImageDraw
 import bmesh
@@ -42,22 +42,14 @@ class Object3D(abc.ABC):
                 if obj.type != "MESH":
                     bpy.data.objects.remove(obj, do_unlink=True)
 
-            # Join the mesh objects
-            for obj in bpy.data.objects:
-                obj.select_set(True)
-            bpy.context.view_layer.objects.active = bpy.data.objects[0]
-            # bpy.ops.object.join()
-            self.object = bpy.data.objects[0]
-
             # Normalize the size so that the max dimension is 1m
+            self.normalize_position()
             self.normalize_scale()
-            if bpy.data.objects == 1:
-                self.normalize_position()
 
     @cached_property
-    def _mesh_nodes(self):
+    def _mesh_nodes(self, object):
         nodes = []
-        for slot in self.object.material_slots:
+        for slot in object.material_slots:
             mat = slot.material
             if mat and mat.use_nodes:
                 for node in mat.node_tree.nodes:
@@ -83,20 +75,27 @@ class Object3D(abc.ABC):
                 bpy.ops.object.transform_apply(scale=True)
 
     def normalize_position(self):
-        bpy.context.view_layer.objects.active = self.object
-        bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
-        self.object.location = (0.0, 0.0, 0.0)
+        objs = [obj for obj in bpy.data.objects if obj.type == "MESH"]
+        # Compute the scene centroid
+        total_loc = Vector((0, 0, 0))
+        for obj in objs:
+            total_loc += obj.location
+        center = total_loc / len(objs)
+
+        # Set origin to geometry bounds for each object, then move all relative to center
+        for obj in objs:
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
+            obj.location -= center
 
     @cached_property
-    def mesh_stats(self) -> dict:
+    def mesh_stats(self, object) -> dict:
         """Get the properties of a given mesh in the current scene.
         Properties are `uv_count`, `texture_count`"""
-
-        assert self.has_one_mesh
         return {
-            "uv_count": len(self.object.data.uv_layers),
-            "texture_count": len(self._mesh_nodes(self.object)),
-            "face_count": len(self.object.data.polygons),
+            "uv_count": len(object.data.uv_layers),
+            "texture_count": len(self._mesh_nodes(object)),
+            "face_count": len(object.data.polygons),
         }
 
     @property
@@ -107,8 +106,7 @@ class Object3D(abc.ABC):
     @abc.abstractmethod
     def renderings(self) -> list[Image.Image]: ...
 
-    @property
-    def uv_score(self) -> float | None:
+    def uv_score(self, mesh, uv_layer=None) -> float | None:
         """
         Estimate how well the active UV map of a mesh object preserves 3D face areas.
 
@@ -129,11 +127,7 @@ class Object3D(abc.ABC):
         Raises:
         ValueError if obj is not a mesh or has no UV map.
         """
-        assert self.has_one_mesh
-        mesh = self.object.data
-        if not mesh.uv_layers:
-            return None
-        uv_data = mesh.uv_layers.active.data
+        uv_data = (mesh.uv_layers[uv_layer] if uv_layer else mesh.uv_layers.active).data
 
         # Collect 3D and UV face areas
         areas_3d = []
@@ -173,7 +167,7 @@ class Object3D(abc.ABC):
         images_pil = self.textures
         imshow(images_pil, cols=min(4, len(images_pil)))
 
-    def draw_uv(self, size=1024, stroke=2, fill=False, mesh=None, uv_layer=None) -> Image.Image|None:
+    def draw_uv(self, mesh, uv_layer=None, size=1024, stroke=2, fill=False) -> Image.Image | None:
         """Draw the UV map of the object.
 
         Args:
@@ -185,7 +179,7 @@ class Object3D(abc.ABC):
             Image.Image: The drawing of the UV map
         """
         bm = bmesh.new()
-        bm.from_mesh(mesh or self.object.data)
+        bm.from_mesh(mesh)
         uv_layer = bm.loops.layers.uv[uv_layer] if uv_layer else bm.loops.layers.uv.active
         if not uv_layer:
             raise Exception("No UV layers found on the mesh")
@@ -197,7 +191,7 @@ class Object3D(abc.ABC):
         # === Draw UV edges ===
         for face in bm.faces:
             uv_coords = [loop[uv_layer].uv for loop in face.loops]
-            if any(map(is_outside_uv,uv_coords)):
+            if any(map(is_outside_uv, uv_coords)):
                 print("The UV map has negative values")
                 return None
             if len(uv_coords) < 2:
@@ -215,6 +209,7 @@ class Object3D(abc.ABC):
 
     def regenerate_uv_map(
         self,
+        object,
         island_margin=0,
         size=512,
         samples=8,
@@ -228,12 +223,10 @@ class Object3D(abc.ABC):
         Returns:
             tuple[Image.Image, Image.Image]: The new texture and the drawing of the new UV map.
         """
-        assert self.has_one_mesh
-
         # Switch to Object mode
-        mesh = self.object.data
-        self.object.select_set(True)
-        bpy.context.view_layer.objects.active = self.object
+        mesh = object.data
+        object.select_set(True)
+        bpy.context.view_layer.objects.active = object
 
         # 1. Duplicate the existing UV map
         mesh.uv_layers.new(name="SmartUV")
@@ -247,7 +240,7 @@ class Object3D(abc.ABC):
 
         # 3. Create new image to bake into
         img = bpy.data.images.new("BakedTexture", size, size)
-        # mat = self.object.active_material
+        # mat = object.active_material
         # nodes = mat.node_tree.nodes
 
         # # Create and activate the new texture node
@@ -258,7 +251,7 @@ class Object3D(abc.ABC):
 
         # 4. For every material slot on the mesh, add an Image Texture node
         #    that points to our new image and mark it active in that material.
-        for slot in self.object.material_slots:
+        for slot in object.material_slots:
             mat = slot.material
             if not mat or mat.use_nodes is False:
                 continue
@@ -281,7 +274,7 @@ class Object3D(abc.ABC):
         bpy.context.scene.cycles.device = device
         bpy.context.scene.cycles.samples = samples
         bpy.context.scene.cycles.use_denoising = True
-        self.object.select_set(True)
+        object.select_set(True)
         bpy.ops.object.bake(type=bake_type, use_clear=True)
 
         # 6. Convert to PIL
@@ -346,7 +339,7 @@ class Object3D(abc.ABC):
 
         return images
 
-    def change_texture(self, image_path: Path | str):
+    def change_texture(self, image_path: Path | str, mat):
         """
         Replaces the object's main texture (Base Color) with a new image.
 
@@ -354,8 +347,6 @@ class Object3D(abc.ABC):
         uses nodes and a Principled BSDF shader. It creates or updates the image
         texture node and connects it to the Base Color input of the shader.
         """
-        assert self.has_one_mesh
-
         # Flip image vertically, because the drawn UV are vertically flipped
         fd, path = tempfile.mkstemp(suffix=".png")
         Image.open(image_path).transpose(Image.FLIP_TOP_BOTTOM).save(path)
@@ -365,7 +356,7 @@ class Object3D(abc.ABC):
         image = bpy.data.images.load(str(Path(path).resolve()))
 
         # Get the active material
-        material = self.object.active_material
+        material = mat
         if not material:
             raise RuntimeError("Mesh has no material assigned.")
         if not material.use_nodes:
@@ -398,3 +389,9 @@ class Object3D(abc.ABC):
 
         # Set the texture node as active (useful for baking)
         node_tree.nodes.active = tex_node
+
+    def join(self, *objects: bpy.types.Object):
+        for obj in bpy.data.objects:
+            obj.select_set(obj in objects)
+        bpy.context.view_layer.objects.active = objects[0]
+        bpy.ops.object.join()

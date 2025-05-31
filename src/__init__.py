@@ -8,6 +8,7 @@ from .blender.scene import load_model, load_hdri
 from .blender.object3d.object3d import Object3D
 from .blender.object3d.objaverse_object3d import ObjaverseObject3D
 from .blender.object3d.shapenetcore_object3d import ShapeNetCoreObject3D
+from .blender.processor import Processor
 
 # Datasets
 from .dataset.dataset3d import Dataset3D

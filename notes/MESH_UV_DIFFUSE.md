@@ -26,9 +26,9 @@ For each mesh $i=1,...,M$:
 
 Materials are the missing ingredient in this recipe.
 
-<p align="center"> <img width="60%" src="img/mesh-uv-diffuse-er.png"></img></p>
+<p align="center"> <img width="75%" src="img/mesh-uv-diffuse-er.png"></img></p>
 
 ## UV-Diffuse couples extraction algorithm
 I've come up with the following algorithm:
-1. If multiple meshes share the same material, **join** them, so that their UVs get merged. This *may* lead to overlapping UV drawings, solvable with texture baking. If any of the UVs spans outside the $[0,1]$ domain, discard these meshes.
+1. If multiple meshes share the same material, **join** them, so that their UVs get merged. This *may* lead to overlapping UV drawings, solvable with texture baking. If any of the UVs spans outside the $[0,1]$ domain, discard this group of meshes.
 2. TODO

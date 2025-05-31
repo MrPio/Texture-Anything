@@ -18,8 +18,12 @@ class Filter(ABC):
         return np.mean(convolved), convolved
 
     @cached_property
-    def is_homogeneous(self, image) -> bool:
-        self(image)[0] < self.threshold
+    def is_jagged(self, image) -> bool:
+        self(image)[0] > self.threshold
+
+    @cached_property
+    def is_plain(self, image) -> bool:
+        self(image)[0] < 0.1
 
 
 class SobelFilter(Filter):
