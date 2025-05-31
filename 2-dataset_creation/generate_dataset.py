@@ -67,7 +67,7 @@ for uid in tqdm(uids, disable=rank != 0):
                 device=device,
             )
         else:
-            diffuse, uv_map = obj.textures[0], obj.draw_uv_map()
+            diffuse, uv_map = obj.textures[0], obj.draw_uv()
 
         if compute_image_density(uv_map) < MIN_UV_DENSITY:
             continue
@@ -76,7 +76,7 @@ for uid in tqdm(uids, disable=rank != 0):
         uv_map.save(uv_path)
 
     if args.overwrite or not mask_path.exists():
-        uv_filled = obj.draw_uv_map(fill=True)
+        uv_filled = obj.draw_uv(fill=True)
         mask = np.all(np.array(uv_filled) == [0, 0, 0, 255], axis=2)
         np.save(mask_path, np.packbits(mask))
 

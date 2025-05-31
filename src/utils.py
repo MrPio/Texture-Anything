@@ -5,9 +5,10 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
+import bpy
 
 
-def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str | Path], size=3, cols: int = None):
+def imshow(images: list[Image.Image | str | Path] | dict[Image.Image | str | Path], size=3, cols: int = None):
     """Plot a list of PIL images in a grid
 
     Args:
@@ -15,6 +16,9 @@ def plot_images(images: list[Image.Image | str | Path] | dict[Image.Image | str 
         size (int, optional): the size in inch of the images
         col (int, optional): The number of columns of the grid. Defaults to 1.
     """
+    images=list(images)
+    if not images:
+        return
     titles = None
     if isinstance(images, dict):
         titles, images = list(images.keys()), list(images.values())
@@ -85,4 +89,28 @@ def is_white(obj):
                 # Check if RGB is exactly white (ignore alpha)
                 if tuple(color[:3]) == (1.0, 1.0, 1.0):
                     return True
+    return False
+
+
+def bpy2pil(img: bpy.types.Image, remove_black=False) -> Image.Image:
+    buffer = np.empty(len(img.pixels), dtype=np.float32)
+    img.pixels.foreach_get(buffer)  # MUCH faster than list(img.pixels) or np.array(img.pixels)
+
+    pixels = (buffer * 255).astype(np.uint8)
+    pixels = pixels.reshape((img.size[1], img.size[0], 4))  # PIL expects (height, width, channels)
+
+    if remove_black:
+        mask = (pixels[:, :, :3] == 0).all(axis=2)
+        pixels[mask, 3] = 0
+
+    return Image.fromarray(pixels, "RGBA")
+
+
+flatten = lambda l: [x for el in list(l) for x in el]
+
+
+def is_outside_uv(vector, threshold=0.15):
+    for coord in [vector.x, vector.y]:
+        if not -threshold < coord < 1 + threshold:
+            return True
     return False

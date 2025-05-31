@@ -1172,7 +1172,7 @@ def main(args):
                 else:
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
 
-                # latent_loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
+                # loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")
                 loss = masked_mse_loss(
                     pred=model_pred.float(),
                     targ=target.float(),
