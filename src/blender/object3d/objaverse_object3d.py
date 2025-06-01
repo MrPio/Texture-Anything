@@ -12,10 +12,10 @@ import bpy
 
 
 class ObjaverseObject3D(Object3D):
-    def __init__(self, uid: str, path: str | Path):
+    def __init__(self, uid: str, path: str | Path, preprocess=True):
         from src.dataset.objaverse_dataset3d import ObjaverseDataset3D
 
-        super(ObjaverseObject3D, self).__init__(uid, path)
+        super(ObjaverseObject3D, self).__init__(uid, path, preprocess)
         self.dataset = ObjaverseDataset3D()
 
     @property

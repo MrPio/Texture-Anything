@@ -36,12 +36,13 @@ class Object3D(abc.ABC):
 
         load_model(str(self.path), reset_scene=True)
 
-        if preprocess:
-            # Remove non mesh objects
-            for obj in bpy.data.objects:
-                if obj.type != "MESH":
-                    bpy.data.objects.remove(obj, do_unlink=True)
+        # Remove non mesh objects
+        for obj in bpy.data.objects:
+            if obj.type != "MESH":
+                bpy.data.objects.remove(obj, do_unlink=True)
 
+        # This increases the loading time almost 10 times
+        if preprocess:
             # Normalize the size so that the max dimension is 1m
             self.normalize_position()
             self.normalize_scale()
@@ -127,9 +128,12 @@ class Object3D(abc.ABC):
         Raises:
         ValueError if obj is not a mesh or has no UV map.
         """
-        uv_data = (mesh.uv_layers[uv_layer] if uv_layer else mesh.uv_layers.active).data
+        uv_layer = mesh.uv_layers[uv_layer] if uv_layer else mesh.uv_layers.active
+        if uv_layer is None:
+            return None
 
         # Collect 3D and UV face areas
+        uv_data = uv_layer.data
         areas_3d = []
         areas_uv = []
 
@@ -167,7 +171,7 @@ class Object3D(abc.ABC):
         images_pil = self.textures
         imshow(images_pil, cols=min(4, len(images_pil)))
 
-    def draw_uv(self, mesh, uv_layer=None, size=1024, stroke=2, fill=False) -> Image.Image | None:
+    def draw_uv(self, mesh, uv_layer=None, size=512, stroke=1, fill=False, verbose=True) -> Image.Image | None:
         """Draw the UV map of the object.
 
         Args:
@@ -192,7 +196,8 @@ class Object3D(abc.ABC):
         for face in bm.faces:
             uv_coords = [loop[uv_layer].uv for loop in face.loops]
             if any(map(is_outside_uv, uv_coords)):
-                print("The UV map has negative values")
+                if verbose:
+                    print("The UV map has negative values")
                 return None
             if len(uv_coords) < 2:
                 continue

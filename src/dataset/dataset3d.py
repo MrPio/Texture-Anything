@@ -69,7 +69,7 @@ class Dataset3D(abc.ABC):
         uid = args.pop("uid")
         silent = args.pop("silent", False)
         try:
-            return self.object_class(uid, self.paths[uid], **args)
+            return self.object_class(uid, self.paths[0][uid], **args)
         except Exception as e:
             if not silent:
                 print(e)

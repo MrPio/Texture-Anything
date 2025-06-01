@@ -17,8 +17,9 @@ class ObjaverseDataset3D(Dataset3D):
         return pd.read_parquet(ObjaverseDataset3D.DATASET_DIR / "2-annotations_filtered_by_thumbnails.parquet")
 
     @cached_property
-    def paths(self) -> dict[str, str]:
-        return {f.stem: str(f) for f in (self.DATASET_DIR / "objects").rglob("*.glb")}
+    def paths(self) -> tuple[dict[str, str],dict[str, int]]:
+        paths = pd.read_parquet(ObjaverseDataset3D.DATASET_DIR / "objaverse_glbs.parquet")
+        return paths["path"].to_dict(), paths["size"].to_dict()
 
     def download(self, processes=16) -> None:
         objaverse.load_objects(self.annotations.index, download_processes=processes)

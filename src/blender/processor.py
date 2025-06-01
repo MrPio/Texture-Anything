@@ -18,11 +18,16 @@ class Processor:
         assert self._elements is not None, "You need to analyze the scene first."
         return self._elements
 
-    def uvs(self, pil=False) -> list[bpy.types.UVLoopLayers]:
+    def uvs(self, pil=False) -> list[bpy.types.UVLoopLayers | Image.Image]:
         uvs = {x[2]: x[0].data for x in self.elements}
-        return [self.object3d.draw_uv(mesh, uv.name) if pil else uv for uv, mesh in uvs.items()]
+        return [self.object3d.draw_uv(mesh, uv.name, verbose=False) if pil else uv for uv, mesh in uvs.items()]
 
-    def diffuses(self, pil=False) -> list[bpy.types.UVLoopLayers]:
+    def masks(self) -> list[np.ndarray]:
+        uvs = {x[2]: x[0].data for x in self.elements}
+        uv_fills = [self.object3d.draw_uv(mesh, uv.name, fill=True, verbose=False) for uv, mesh in uvs.items()]
+        return [np.all(np.array(uv_fill) == [0, 0, 0, 255], axis=2) if uv_fill else None for uv_fill in uv_fills]
+
+    def diffuses(self, pil=False) -> list[bpy.types.UVLoopLayers | Image.Image]:
         diffuses = {x[3] for x in self.elements}
         return [bpy2pil(dif) if pil else dif for dif in diffuses]
 

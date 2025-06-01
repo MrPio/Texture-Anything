@@ -29,5 +29,7 @@ from .logger import log, cprint
 
 # Initialization
 import seaborn as sns
+import bpy
 
 sns.set(style="darkgrid", context="notebook", font_scale=1.15)
+bpy.context.preferences.edit.use_global_undo = False

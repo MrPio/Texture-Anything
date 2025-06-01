@@ -17,11 +17,9 @@ class Filter(ABC):
         convolved = np.sqrt(np.sum(convolved, axis=(0)))
         return np.mean(convolved), convolved
 
-    @cached_property
     def is_jagged(self, image) -> bool:
         self(image)[0] > self.threshold
 
-    @cached_property
     def is_plain(self, image) -> bool:
         self(image)[0] < 0.1
 

@@ -4,8 +4,8 @@ from pathlib import Path
 import bpy
 import PIL
 
-
 __scene_resetted_times = 0
+__log_disabled = False
 
 
 def __reset_scene():
@@ -71,9 +71,12 @@ def load_model(path: str, reset_scene: bool = True) -> list:
         bpy.ops.wm.obj_import(filepath=path)
     else:
         bpy.ops.import_scene.gltf(filepath=path, loglevel=40)
-        for l in logging.root.manager.loggerDict:
-            if "glTF" in l:
-                logging.getLogger(l).disabled = True
+        global __log_disabled
+        if not __log_disabled:
+            __log_disabled = True
+            for l in logging.root.manager.loggerDict:
+                if "glTF" in l:
+                    logging.getLogger(l).disabled = True
 
     return list(bpy.context.scene.objects)
 

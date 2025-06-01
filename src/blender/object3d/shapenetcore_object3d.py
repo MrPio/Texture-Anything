@@ -19,7 +19,7 @@ class ShapeNetCoreObject3D(Object3D):
         if preprocess:
             # Remove useless meshes and merge vertices by distance
             for obj in bpy.data.objects:
-                if obj.type == "MESH" and is_textured(obj) or not is_white(obj):
+                if is_textured(obj) or not is_white(obj):
                     # Remove collapsed vertices
                     if merge_vertices:
                         bpy.context.view_layer.objects.active = obj
