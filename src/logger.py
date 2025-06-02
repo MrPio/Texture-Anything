@@ -41,7 +41,7 @@ def log(*vals, use_log=True):
 
     vals = map(fmt, vals)
     if use_log:
-        logger.info(" ".join(vals) + ".")
+        logger.info(" ".join(vals))
     else:
         print(*vals)
 

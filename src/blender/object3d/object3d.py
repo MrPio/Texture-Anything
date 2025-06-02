@@ -37,9 +37,12 @@ class Object3D(abc.ABC):
         load_model(str(self.path), reset_scene=True)
 
         # Remove non mesh objects
+        self.objects = []
         for obj in bpy.data.objects:
             if obj.type != "MESH":
                 bpy.data.objects.remove(obj, do_unlink=True)
+            else:
+                self.objects.append(obj)
 
         # This increases the loading time almost 10 times
         if preprocess:
@@ -399,4 +402,6 @@ class Object3D(abc.ABC):
         for obj in bpy.data.objects:
             obj.select_set(obj in objects)
         bpy.context.view_layer.objects.active = objects[0]
+        for o in objects:
+            self.objects.remove(o)
         bpy.ops.object.join()

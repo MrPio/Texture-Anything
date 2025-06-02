@@ -33,7 +33,7 @@ class Processor:
 
     def analyze_scene(self, verbose=True):
         elements = []
-        for obj in bpy.data.objects:
+        for obj in self.object3d.objects:
             mesh = obj.data
 
             # Gather this mesh's UV layer names
@@ -116,7 +116,7 @@ class Processor:
                 f"blue:{len({x[2] for x in elements})} UV-maps,",
                 f"green:{len({x[3] for x in elements})} diffuse",
                 "in",
-                f"yellow:{len(bpy.data.objects)} objects",
+                f"yellow:{len(self.object3d.objects)} objects",
             )
 
         self._elements = set(elements)

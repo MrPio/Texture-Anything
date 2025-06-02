@@ -4,7 +4,7 @@ This script is CWD-independent
 
 Usage:
     $ srun -n 8 --mem=30G  --time=04:00:00 python generate_dataset.py --dataset="shapenetcore" --regenerate-uv --render
-    $ srun -n 8 --mem=30G  --time=04:00:00 python generate_dataset.py --dataset="objaverse"
+    $ srun -n 8 --mem=30G  --time=04:00:00 python generate_dataset.py --dataset="objaverse" --render --split ../dataset/objaverse/missing_thumbnails.txt
 
 Author:
     Valerio Morelli - 2025-05-08
@@ -35,6 +35,7 @@ cprint("Rank:", rank, "Size:", size)
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="objaverse")
+    parser.add_argument("--split", type=Path, default=None)
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--regenerate-uv", action="store_true")
     parser.add_argument("--render", action="store_true")
@@ -48,10 +49,16 @@ conv_filter = LaplacianFilter()
 DIR = dataset.DATASET_DIR
 # uids = dataset.statistics[dataset.statistics["valid"]].index[rank::size]
 paths, sizes = dataset.paths
-uids = list(paths.keys())[rank::size]
-processed_uids = {} if args.overwrite else {file.stem for file in (DIR / "uv").glob("*")}
-cprint("Already processed", len(processed_uids), "uids")
-uids = set(uids).difference(processed_uids)
+uids = set(paths.keys())
+if args.split:
+    split = open(args.split).read().split("\n")
+    uids = uids.intersection(split)
+
+# processed_uids = {} if args.overwrite else {file.stem for file in (DIR / "uv").glob("*")}
+# uids = set(uids).difference(processed_uids)
+cprint("Need to process", len(uids), "uids")
+uids = list(uids)[rank::size]
+cprint(f"[Rank {rank}/{size}] I have", len(uids), "uids")
 
 # Optimization --------------------------------
 if args.regenerate_uv:
@@ -65,11 +72,14 @@ if args.regenerate_uv:
 for uid in tqdm(uids, disable=rank != 0):
     # Load the object into the blender scene
     if sizes[uid] > MAX_SIZE or (obj := dataset[dict(uid=uid, preprocess=args.render, silent=True)]) is None:
+        ObjaverseObject3D(uid, paths[uid], preprocess=True)
+        print(sizes[uid], obj is None)
         continue
 
+    print(args.render, (DIR / "render" / f"{uid}.png").exists())
     # Renderings
-    if args.render and (args.overwrite or not (DIR / "render" / f"{uid}_2.png").exists()):
-        renderings = obj.render(samples=1, views=3, size=(512, 512))
+    if args.render and (args.overwrite or not (DIR / "render" / f"{uid}.png").exists()):
+        renderings = obj.render(samples=1, views=1, size=(512, 512))
         for i, rendering in enumerate(renderings):
             rendering.save(DIR / "render" / f"{uid}_{i}.png")
 
@@ -88,30 +98,33 @@ for uid in tqdm(uids, disable=rank != 0):
         diffuse_path = DIR / "diffuse" / f"{uid}_{i}.png"
         mask_path = DIR / "mask" / f"{uid}_{i}.npy"
 
+        if not args.overwrite and all(p.exists() for p in [uv_path, diffuse_path, mask_path]):
+            print("-", end="")
+            continue
+
         # UVs, Diffuses and Masks
-        if args.overwrite or any(not p.exists() for p in [uv_path, diffuse_path, mask_path]):
-            if args.regenerate_uv:
-                # TODO: GROUP MESHES WITH PROCESSOR TO ALLOW MULTI MESH OBJS
-                raise NotImplementedError()
-                diffuse, uv = obj.regenerate_uv_map(
-                    samples=10,
-                    bake_type=dataset.BAKE_TYPE,
-                    device=device,
-                )
+        if args.regenerate_uv:
+            # TODO: GROUP MESHES WITH PROCESSOR TO ALLOW MULTI MESH OBJS
+            raise NotImplementedError()
+            diffuse, uv = obj.regenerate_uv_map(
+                samples=10,
+                bake_type=dataset.BAKE_TYPE,
+                device=device,
+            )
 
-            # Quality checks
-            if (
-                any(_ is None for _ in [uv, diff, mask])
-                or diff.size[0] != diff.size[1]
-                or compute_image_density(uv) < MIN_UV_DENSITY
-                or (uv_score := obj.uv_score(bpy.data.objects[i].data)) is None
-                or uv_score < MIN_UV_SCORE
-                or conv_filter.is_plain(diff)
-            ):
-                continue
+        # Quality checks
+        if (
+            any(_ is None for _ in [uv, diff, mask])
+            or diff.size[0] != diff.size[1]
+            or compute_image_density(uv) < MIN_UV_DENSITY
+            or (uv_score := obj.uv_score(obj.objects[i].data)) is None
+            or uv_score < MIN_UV_SCORE
+            or conv_filter.is_plain(diff)
+        ):
+            continue
 
-            diff.save(diffuse_path)
-            uv.save(uv_path)
-            np.save(mask_path, np.packbits(mask))
-            if size == 1:
-                cprint(f"green:EXPORTED --> {uid}_{i}.png")
+        diff.save(diffuse_path)
+        uv.save(uv_path)
+        np.save(mask_path, np.packbits(mask))
+        if size == 1:
+            cprint(f"green:EXPORTED --> {uid}_{i}.png")

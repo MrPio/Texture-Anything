@@ -21,7 +21,7 @@ class Filter(ABC):
         self(image)[0] > self.threshold
 
     def is_plain(self, image) -> bool:
-        self(image)[0] < 0.1
+        self(image)[0] < 0.5
 
 
 class SobelFilter(Filter):

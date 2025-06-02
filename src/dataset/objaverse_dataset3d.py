@@ -17,7 +17,7 @@ class ObjaverseDataset3D(Dataset3D):
         return pd.read_parquet(ObjaverseDataset3D.DATASET_DIR / "2-annotations_filtered_by_thumbnails.parquet")
 
     @cached_property
-    def paths(self) -> tuple[dict[str, str],dict[str, int]]:
+    def paths(self) -> tuple[dict[str, str], dict[str, int]]:
         paths = pd.read_parquet(ObjaverseDataset3D.DATASET_DIR / "objaverse_glbs.parquet")
         return paths["path"].to_dict(), paths["size"].to_dict()
 
