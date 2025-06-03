@@ -4,12 +4,11 @@
 # - Accelerate's --num_processes=<NUM_GPUS>
 # - The name of the train in $OUTPUT_DIR
 # - A number of --epochs compatible with the logic batch size
-# - Wheter to use --pixel_space_loss_weight
 
 #SBATCH --job-name=controlnet_sdxl
 #SBATCH --output=controlnet_sdxl.log
 #SBATCH --error=controlnet_sdxl.log
-#SBATCH --time=18:00:00
+#SBATCH --time=24:00:00
 #SBATCH --partition=boost_usr_prod
 ##SBATCH --qos=boost_qos_dbg
 #SBATCH --gres=gpu:2
@@ -20,7 +19,7 @@ export CACHE_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/.huggingfa
 export DATASET_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/dataset"
 export VAE_DIR="madebyollin/sdxl-vae-fp16-fix"
 
-export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/trainings/SD1xl_CN_32bs_1e-5lr_8k_latent-loss"
+export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/trainings/SDxl_CN_64bs_1e-5lr_80k_masked-loss"
 
 cd /leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training
 
@@ -36,16 +35,14 @@ accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet_sd
     --conditioning_image_column="uv" \
     --caption_column="caption" \
     \
-    --pixel_space_loss_weight=0 \
-    \
     --resolution=512 \
     --num_train_epochs=50 \
     --learning_rate=1e-5 \
     --train_batch_size=8 \
-    --gradient_accumulation_steps=2 \
+    --gradient_accumulation_steps=4 \
     --mixed_precision="fp16" \
     --checkpointing_steps=1000 \
-    --validation_steps=200 \
+    --validation_steps=100 \
     --seed=42 \
     \
     --validation_image \

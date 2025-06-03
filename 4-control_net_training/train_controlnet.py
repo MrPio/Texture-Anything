@@ -523,7 +523,7 @@ def parse_args(input_args=None):
         "--mask_column",
         type=str,
         default="mask",
-        help="The column of the dataset containing the ground truth 1024x1024 masks.",
+        help="The column of the dataset containing the ground truth 512x512 masks.",
     )
     parser.add_argument(
         "--caption_column",
@@ -735,7 +735,8 @@ def make_train_dataset(args, tokenizer, accelerator):
             mask_compressed = base64.b64decode(mask)
             mask_decompressed = zlib.decompress(mask_compressed)
             mask_packed = np.frombuffer(mask_decompressed, dtype=np.uint8)
-            mask_npy = np.unpackbits(mask_packed).reshape(1024, 1024)
+            mask_unpacked=np.unpackbits(mask_packed)
+            mask_npy = mask_unpacked.reshape(int(len(mask_unpacked) ** 0.5), -1)
             return torch.from_numpy(mask_npy)
 
         masks = [decode_mask(mask) for mask in examples[mask_column]]
@@ -765,7 +766,12 @@ def collate_fn(examples):
     pixel_values = torch.stack([example["pixel_values"] for example in examples])
     pixel_values = pixel_values.to(memory_format=torch.contiguous_format).float()
 
-    mask_values = torch.stack([example["mask_values"] for example in examples])
+    mask_values = torch.stack(
+        [
+            F.interpolate(example["mask_values"].float().unsqueeze(0).unsqueeze(0), size=(args.resolution, args.resolution), mode="nearest").squeeze(0).squeeze(0)
+            for example in examples
+        ]
+    )
     mask_values = mask_values.to(memory_format=torch.contiguous_format).float()
 
     conditioning_pixel_values = torch.stack([example["conditioning_pixel_values"] for example in examples])

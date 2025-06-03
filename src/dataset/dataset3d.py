@@ -52,11 +52,15 @@ class Dataset3D(abc.ABC):
     @cached_property
     def triplets(self) -> set[str]:
         """Load the triplets dataset as intersection of uids in `caption`, `uv` and `diffuse` folders."""
-        captions = {x.stem for x in (self.DATASET_DIR / "render").glob("*") if x.suffix in Dataset3D.IMG_EXT}
         uvs = {x.stem for x in (self.DATASET_DIR / "uv").glob("*") if x.suffix in Dataset3D.IMG_EXT}
-        diffuses = {x.stem for x in (self.DATASET_DIR / "diffuse").glob("*") if x.suffix in Dataset3D.IMG_EXT}
-        masks = {x.stem for x in (self.DATASET_DIR / "mask").glob("*.npy")}
-        return captions.intersection(uvs, diffuses, masks)
+        diffuses = {
+            x.stem.split("_")[0] for x in (self.DATASET_DIR / "diffuse").glob("*") if x.suffix in Dataset3D.IMG_EXT
+        }
+        masks = {x.stem.split("_")[0] for x in (self.DATASET_DIR / "mask").glob("*.npy")}
+        captions = {
+            x.split("_")[0] for x in pd.read_json(self.DATASET_DIR / "caption" / "captions.json", typ="series").index
+        }
+        return set(filter(lambda uv: all(uv.split("_")[0] in x for x in [captions, diffuses, masks]), uvs))
 
     def __getitem__(self, args: dict | str) -> Object3D | None:
         """Get a Object3D with the given UID
