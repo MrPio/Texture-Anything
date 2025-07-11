@@ -1419,7 +1419,9 @@ def main(args):
                         accelerator.save_state(save_path)
                         logger.info(f"Saved state to {save_path}")
 
-                    if args.validation_prompt is not None and global_step % args.validation_steps == 0:
+                    if args.validation_prompt is not None and (
+                        global_step == 1 or global_step % args.validation_steps == 0
+                    ):
                         image_logs = log_validation(
                             vae=vae,
                             unet=unet,
