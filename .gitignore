@@ -11,6 +11,8 @@
 .vscode/
 *.blend
 *.blend1
+api/.cache/
+api/inferences/
 
 dataset/objaverse/0-annotations.pkl
 dataset/objaverse/1-annotations_filtered.parquet
