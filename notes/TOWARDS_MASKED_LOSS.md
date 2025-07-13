@@ -28,7 +28,7 @@ This divergence pulls the predicted Gaussian PDF (the predicted mean and varianc
 ### The architecture of a VAE
 Stable Diffusion's VAE uses 3 convolution layers with stride 2 (and opportune padding), meaning that the output latent is a $8\times$ downsampled version of the pixel-space image ($64\times$ information reduction). The number of channels is instead increased to $C_{feat}=16$ or more.
 
-The output of the 3 down blocks, of shape $[B,\,C_{feat},\,64,\,64]$, is passed through 2 fully connected layers (4 $C_{feat}\times 1\times 1$ kernels that reshape the tensor $[B,\,C_{feat},\,64,\,64]$ to two $[B,\,4,\,64,\,64]$ tensors, one for the mean and the other for the variance) to predict, for each "latent pixel", a $\mu$ and a $log(\sigma)$ (for numerical stability). When used for inference, the second head is deactivated and **the latent point** $z\sim q(z\mid x)$ **is deterministically chosen as** $z=\mu$.
+The output of the 3 down blocks, of shape $[B,\,C_{feat},\,64,\,64]$, is passed through 2 fully connected layers (four $C_{feat}\times 1\times 1$ kernels that reshape the tensor $[B,\,C_{feat},\,64,\,64]$ to two $[B,\,4,\,64,\,64]$ tensors, one for the mean and the other for the variance) to predict, for each "latent pixel", a $\mu$ and a $log(\sigma)$ (for numerical stability). When used for inference, the second head is deactivated and **the latent point** $z\sim q(z\mid x)$ **is deterministically chosen as** $z=\mu$.
 
 >[!NOTE]
 >**Evolution of tensor shape in the VAE**
