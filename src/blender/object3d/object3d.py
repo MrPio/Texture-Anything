@@ -347,7 +347,7 @@ class Object3D(abc.ABC):
 
         return images
 
-    def change_texture(self, image_path: Path | str, mat):
+    def change_texture(self, image_path: Path | str, mat=None):
         """
         Replaces the object's main texture (Base Color) with a new image.
 
@@ -366,7 +366,10 @@ class Object3D(abc.ABC):
         # Get the active material
         material = mat
         if not material:
-            raise RuntimeError("Mesh has no material assigned.")
+            if self.objects[0].material_slots:
+                material = self.objects[0].material_slots[0].material
+            else:
+                raise RuntimeError("Mesh has no material assigned.")
         if not material.use_nodes:
             material.use_nodes = True
 

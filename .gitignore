@@ -24,6 +24,7 @@ dataset/shapenetcore/**
 4-control_net_training/dataset_old/**
 4-control_net_training/dataset/train/metadata.csv
 4-control_net_training/trainings/
+4-control_net_training/renderings/
 controlnet_sd15.log
 4-control_net_training/dataset.zip
 4-control_net_training/diffusers/
