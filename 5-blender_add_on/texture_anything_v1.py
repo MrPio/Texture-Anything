@@ -10,29 +10,10 @@ bl_info = {
 
 import subprocess
 import sys
-
-
-def ensure_pillow_installed():
-    try:
-        sys.path.append(str(Path("").resolve()/".local/lib/python3.10/site-packages"))
-        import PIL
-
-        return
-    except ImportError:
-        pass
-
-    python_executable = sys.executable
-    subprocess.run([python_executable, "-m", "pip", "install", "Pillow"], check=True)
-    import importlib
-
-    globals()["PIL"] = importlib.import_module("PIL")
-
-
 import hashlib
 import io
-import torch
 from pathlib import Path
-from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, UniPCMultistepScheduler
+import tempfile
 from PIL import Image, ImageOps
 
 import bpy
@@ -41,52 +22,42 @@ import threading
 import queue
 import random
 
-ensure_pillow_installed()
+# ensure_pillow_installed()
 import time
 from PIL import Image, ImageDraw
 import bmesh
 
-execution_queue = queue.Queue()  # Queue for scheduling functions to run on Blender's main thread
+import requests
+from PIL import Image
+import io
+import base64
+from pathlib import Path
 
-CNET_MODEL = "MrPio/Texture-Anything_CNet-SD15"
-SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
-inference_cache_dir=Path(f"{bpy.path.abspath("//")}/cached_inference")
-inference_cache_dir.mkdir(exist_ok=True)
-
-controlnet = ControlNetModel.from_pretrained(CNET_MODEL, torch_dtype=torch.float16)
-pipe = StableDiffusionControlNetPipeline.from_pretrained(
-    SD_MODEL, controlnet=controlnet, torch_dtype=torch.float16, safety_checker=None
-)
-pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
-pipe.enable_xformers_memory_efficient_attention()  # if xformers installed
-pipe.enable_model_cpu_offload()
-
-def pil2hash(image: Image.Image) -> str:
+def predict(caption, image,seed,steps):
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
-    image_bytes = buffer.getvalue()
-    return hashlib.sha256(image_bytes).hexdigest()
+    base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    payload = {
+        "data": [
+           caption,
+            {"name": "image.png", "data": base64_image},
+            steps,
+            seed,
+            True
+        ]
+    }
+
+    response = requests.post("http://localhost:7860/predict", json=payload)
+
+    if response.ok:
+        output_base64 = response.json()["data"][0]
+        return Image.open(io.BytesIO(base64.b64decode(output_base64)))
+    else:
+        print("Error:", response.text)
 
 
-def caption2hash(caption: str) -> str:
-    return hashlib.sha256(caption.lower().strip("., +-=?!").encode()).hexdigest()
-
-def infer(caption: str, condition_image: Image.Image, steps: int = 20, seed: int = 0, invert_uv: bool = True):
-    print("Loading condition image")
-    img = condition_image.convert("RGB")
-    if invert_uv:
-        img = ImageOps.invert(img)
-        print("Condition image inverted")
-    cache_file = inference_cache_dir/f"{pil2hash(img)}_{caption2hash(caption)}.png"
-    if cache_file.exists():
-        return Image.open(cache_file)
-
-    generator = torch.manual_seed(seed)
-    print("Starting generation...")
-    output = pipe(prompt=caption, image=img, num_inference_steps=steps, generator=generator).images[0]
-    print("Caching result...")
-    output.save(cache_file)
-    return output
+execution_queue = queue.Queue()  # Queue for scheduling functions to run on Blender's main thread
 
 def process_queue():
     # Process all functions in the execution queue
@@ -116,8 +87,13 @@ def apply_texture(tex_path, context):
         print(f"[TextureAnything] File not found: {tex_path}")
         return
 
+    # Flip image vertically, because the drawn UV are vertically flipped
+    fd, path = tempfile.mkstemp(suffix=".png")
+    Image.open(tex_path).transpose(Image.FLIP_TOP_BOTTOM).save(path)
+    os.close(fd)
+
     # Load the generated image into Blender
-    img = bpy.data.images.load(tex_path)
+    img = bpy.data.images.load(path)
 
     # Create a new material with nodes enabled
     mat = bpy.data.materials.new(name="AI_Generated_Texture")
@@ -189,6 +165,17 @@ def register():
         description="Describe the texture you want",
         default="A yellow plate with flowers motives",
     )
+    bpy.types.Scene.texture_anything_seed = bpy.props.IntProperty(
+        min=-1,
+        name="Seed",
+        default=-1,
+    )
+    bpy.types.Scene.texture_anything_steps = bpy.props.IntProperty(
+        min=4,
+        max=60,
+        name="Generation Steps",
+        default=20,
+    )
     bpy.types.Scene.texture_anything_loading = bpy.props.BoolProperty(name="Loading", default=False)
     # Register a timer to process the main thread execution queue periodically
     bpy.app.timers.register(process_queue)
@@ -198,6 +185,8 @@ def unregister():
     bpy.utils.unregister_class(OT_generate)
     bpy.utils.unregister_class(PT_panel)
     del bpy.types.Scene.texture_anything_caption
+    del bpy.types.Scene.texture_anything_seed
+    del bpy.types.Scene.texture_anything_steps
     del bpy.types.Scene.texture_anything_loading
     bpy.app.timers.unregister(process_queue)
 
@@ -212,9 +201,9 @@ class OT_generate(bpy.types.Operator):
         obj = context.active_object
 
         # Ensure an active mesh object is selected
-        if not bpy.data.filepath:
-            self.report({"ERROR"}, "Save the file .blend and retry")
-            return {"CANCELLED"}
+        # if not bpy.data.filepath:
+        #     self.report({"ERROR"}, "Save the file .blend and retry")
+        #     return {"CANCELLED"}
         # Ensure an active mesh object is selected
         if obj is None or obj.type != "MESH":
             self.report({"ERROR"}, "Select a mesh object")
@@ -222,6 +211,8 @@ class OT_generate(bpy.types.Operator):
 
         # User description of desired texture (currently unused in mock)
         caption = scene.texture_anything_caption
+        seed= scene.texture_anything_seed
+        steps= scene.texture_anything_steps
 
         # Export the UV layout of the active object
         # uv_path = bpy.path.abspath("C:\\Users\\tiasb\\Desktop\\uv_layout.png")
@@ -262,7 +253,7 @@ class OT_generate(bpy.types.Operator):
                 #     color=random.choice(["red", "black", "blue", "green", "yellow", "orange", "purple", "pink"]),
                 # )  # Create a black image
 
-                img = infer(caption=caption, condition_image=condition_image)
+                img = predict(caption, condition_image,seed,steps)
 
                 img.save(out_path)  # Save the generated image
                 print("[TextureAnything] texture saved at:", out_path)
@@ -296,10 +287,13 @@ class PT_panel(bpy.types.Panel):
         caption = getattr(scene, "texture_anything_caption", "")
         loading = getattr(scene, "texture_anything_loading")
 
-        layout.label(text="Texture Description:")
+        layout.label(text="Texture Anything Settings")
 
-        row = layout.row()
-        row.prop(scene, "texture_anything_caption", text="")
+        col = layout.column(align=True)
+        col.prop(scene, "texture_anything_caption", text="Texture Description")
+        col.prop(scene, "texture_anything_seed", text="Seed")
+        col.prop(scene, "texture_anything_steps", text="Steps")
+
         if loading:
             layout.label(text="⏳ Generating...")
         else:
