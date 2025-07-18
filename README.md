@@ -1,6 +1,12 @@
-# Texture-Anything
+# Texture-Anything: a Blender add-on for generating textures using ControlNet UV-map conditioning
 
-Blender plugin to generate texture using StableDiffusion+ControlNet. The conditioning is on the UV map.
+### 📘 Thesis - *Texture Anything* [`.PDF`](notes/Texture-Anything.pdf) 
+### 📙 Slideshow (Now with a video demo!) - *Texture Anything* [`.PPTX`](notes/Texture-Anything-Slideshow.pptx)
+
+<p align="center">
+    <img src="notes/img/objaverse.jpg" width="40%"></img>
+    <img src="notes/img/shapenet.jpg" width="40%"></img>
+</p>
 
 ## 📌 TL;DR
 
@@ -8,12 +14,16 @@ The goal of this project is to train a ControlNet on UV conditioning in order to
 
 ## 📦 How this repository is structured
 
-The repository is structured in cronological sections, each containing several jupyter notebooks. The `src` module holds the recurrent code.
+The repository is structured in cronological sections, each containing several jupyter notebooks. The [`src`](src/) module contains the code of the classes that are instantiated throughout all the notebooks.
 
 > [!NOTE]
 > **Execution Order**
 > 
 > As I haven't included the `.parquet` intermediary files due to their size, you should run all the notebooks one after the other, in order.
+
+<p align="center">
+    <img src="notes/img/final_comparison.jpg" width="80%"></img>
+</p>
 
 <!-- ### 1 Annotation Filtering
 
