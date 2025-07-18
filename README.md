@@ -1,16 +1,20 @@
 # Texture-Anything: a Blender add-on for generating textures using ControlNet UV-map conditioning
 
+<p align="center">
+    <img src="notes/img/inference.png" width="100%"></img>
+</p>
+
 ### 📘 Thesis - *Texture Anything* [`.PDF`](notes/Texture-Anything.pdf) 
 ### 📙 Slideshow (Now with a video demo!) - *Texture Anything* [`.PPTX`](notes/Texture-Anything-Slideshow.pptx)
+
+## 📌 TL;DR
+
+The goal of this project is to train a ControlNet on UV conditioning in order to generate textures for a model given its UV map. The dataset is a mix of Objaverse and [ShapeNetCore](https://huggingface.co/datasets/ShapeNet/ShapeNetCore) and each sample is a triplet of _caption_, _uv map_ baked as image and _diffuse_ texture as ground truth.
 
 <p align="center">
     <img src="notes/img/objaverse.jpg" width="40%"></img>
     <img src="notes/img/shapenet.jpg" width="40%"></img>
 </p>
-
-## 📌 TL;DR
-
-The goal of this project is to train a ControlNet on UV conditioning in order to generate textures for a model given its UV map. The dataset is a mix of Objaverse and [ShapeNetCore](https://huggingface.co/datasets/ShapeNet/ShapeNetCore) and each sample is a triplet of _caption_, _uv map_ baked as image and _diffuse_ texture as ground truth.
 
 ## 📦 How this repository is structured
 
@@ -24,6 +28,7 @@ The repository is structured in cronological sections, each containing several j
 <p align="center">
     <img src="notes/img/final_comparison.jpg" width="80%"></img>
 </p>
+
 
 <!-- ### 1 Annotation Filtering
 
