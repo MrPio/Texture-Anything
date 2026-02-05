@@ -1,10 +1,11 @@
-# Texture-Anything: a Blender add-on for generating textures using ControlNet UV-map conditioning
-
-
-
 <p align="center">
     <img src="assets/scene5.png" width="100%"></img>
-    <img src="notes/img/inference.png" width="100%"></img>
+</p>
+
+# Texture-Anything: a Blender add-on for generating textures using ControlNet UV-map conditioning
+
+<p align="center">
+    <img src="notes/img/inference.png" width="80%"></img>
 </p>
 
 ### 📘 Thesis - *Texture Anything* [`.PDF`](notes/Texture-Anything.pdf) 
@@ -30,6 +31,12 @@ The repository is structured in cronological sections, each containing several j
 
 <p align="center">
     <img src="notes/img/final_comparison.jpg" width="80%"></img>
+</p>
+
+This is a sample scene texturized with [our model](https://huggingface.co/MrPio/Texture-Anything_CNet-SD15):
+
+<p align="center">
+    <img src="assets/scene2.png" width="100%"></img>
 </p>
 
 
