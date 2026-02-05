@@ -85,33 +85,40 @@ def apply_texture(tex_path, context):
     # Check if the texture file exists
     if not os.path.exists(tex_path):
         print(f"[TextureAnything] File not found: {tex_path}")
-        return
+        raise Exception("file not found")
 
     # Flip image vertically, because the drawn UV are vertically flipped
+    print(f"[TextureAnything] Flip image vertically")
     fd, path = tempfile.mkstemp(suffix=".png")
     Image.open(tex_path).transpose(Image.FLIP_TOP_BOTTOM).save(path)
     os.close(fd)
 
     # Load the generated image into Blender
+    print(f"[TextureAnything] Load the generated image")
     img = bpy.data.images.load(path)
 
     # Create a new material with nodes enabled
+    print(f"[TextureAnything] Create a new material")
     mat = bpy.data.materials.new(name="AI_Generated_Texture")
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links
 
     # Get the Principled BSDF shader node
+    print(f"[TextureAnything] Get the Principled BSDF")
     bsdf = nodes.get("Principled BSDF")
 
     # Create a new Image Texture node and assign the loaded image
+    print(f"[TextureAnything] Create a new Image Texture node")
     texNode = nodes.new("ShaderNodeTexImage")
     texNode.image = img
 
     # Connect the Image Texture color output to the Base Color input of the shader
+    print(f"[TextureAnything] Connect the Image Texture color output to the Base Color")
     links.new(bsdf.inputs["Base Color"], texNode.outputs["Color"])
 
     # Assign the material to the active object, replacing existing or appending
+    print(f"[TextureAnything] Assign the material to the active object")
     if len(obj.data.materials):
         obj.data.materials[0] = mat
     else:
@@ -171,8 +178,8 @@ def register():
         default=-1,
     )
     bpy.types.Scene.texture_anything_steps = bpy.props.IntProperty(
-        min=4,
-        max=60,
+        min=2,
+        max=300,
         name="Generation Steps",
         default=20,
     )
@@ -262,7 +269,8 @@ class OT_generate(bpy.types.Operator):
                 execution_queue.put(lambda: apply_texture(out_path, context))
             finally:
                 # Always unset loading flag on main thread, even if error occurs
-                execution_queue.put(lambda: apply_texture(out_path, context))
+                print("[TextureAnything] unset loading flag")
+                context.scene.texture_anything_loading = False
 
         # Start the mock generation in a separate thread to avoid freezing Blender UI
         scene.texture_anything_loading = True

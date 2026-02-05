@@ -14,3 +14,6 @@ torch
 torchvision
 tqdm
 trimesh
+rich
+termcolor
+scipy

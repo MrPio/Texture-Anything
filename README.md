@@ -1,6 +1,9 @@
 # Texture-Anything: a Blender add-on for generating textures using ControlNet UV-map conditioning
 
+
+
 <p align="center">
+    <img src="assets/scene5.png" width="100%"></img>
     <img src="notes/img/inference.png" width="100%"></img>
 </p>
 

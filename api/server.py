@@ -7,7 +7,6 @@ import torch
 from pathlib import Path
 from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, UniPCMultistepScheduler
 from PIL import Image, ImageOps
-import gradio as gr
 from huggingface_hub import login
 import os
 import dotenv
@@ -17,17 +16,19 @@ from typing import List, Union
 from PIL import Image, ImageDraw
 import base64
 import io
-dotenv.load_dotenv()
 
+dotenv.load_dotenv()
 login(os.environ["HF_TOKEN"])
 
 # ---- Model loading ----
-CACHE_DIR = Path(__file__).parent/".cache"
+CACHE_DIR = Path(__file__).parent / ".cache"
 CNET_MODEL = "MrPio/Texture-Anything_CNet-SD15"
 SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
 
 controlnet = ControlNetModel.from_pretrained(
-    CNET_MODEL, cache_dir=CACHE_DIR, torch_dtype=torch.float16
+    CNET_MODEL,
+    cache_dir=CACHE_DIR,
+    torch_dtype=torch.float16,
 )
 pipe = StableDiffusionControlNetPipeline.from_pretrained(
     SD_MODEL,
@@ -39,7 +40,7 @@ pipe = StableDiffusionControlNetPipeline.from_pretrained(
 
 # speed & memory optimizations
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
-pipe.enable_xformers_memory_efficient_attention()  # if xformers installed
+# pipe.enable_xformers_memory_efficient_attention()  # if xformers installed
 pipe.enable_model_cpu_offload()
 
 
@@ -58,8 +59,8 @@ def caption2hash(caption: str) -> str:
 def infer(caption: str, condition_image: Image.Image, steps: int = 20, seed: int = -1, invert: bool = True):
     print("Loading condition image")
     img = condition_image.convert("RGB")
-    if seed==-1:
-        seed=random.randint(0,1e6)
+    if seed == -1:
+        seed = random.randint(0, int(1e6))
     if invert:
         img = ImageOps.invert(img)
         print("Condition image inverted")
@@ -75,14 +76,18 @@ def infer(caption: str, condition_image: Image.Image, steps: int = 20, seed: int
     output.save(cache_file)
     return output
 
+
 app = FastAPI()
+
 
 class ImageData(BaseModel):
     name: str
     data: str  # base64 string
 
+
 class InputPayload(BaseModel):
     data: List[Union[str, ImageData, int, float, bool]]
+
 
 @app.post("/predict")
 async def run_predict(payload: InputPayload):
@@ -97,7 +102,7 @@ async def run_predict(payload: InputPayload):
     image_bytes = base64.b64decode(cond.data)
     image = Image.open(io.BytesIO(image_bytes))
 
-    output=infer(txt, image, steps, seed, inv)
+    output = infer(txt, image, steps, seed, inv)
 
     # Encode output image to base64
     buffer = io.BytesIO()

@@ -15,16 +15,16 @@
 #SBATCH --mem=42G
 
 export SD_MODEL="stabilityai/stable-diffusion-xl-base-1.0"
-export CACHE_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/.huggingface"
-export DATASET_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/dataset"
+export CACHE_DIR="/home/vmorelli-iit.local/Projects/Texture-Anything/.huggingface"
+export DATASET_DIR="/home/vmorelli-iit.local/Projects/Texture-Anything/4-control_net_training/dataset"
 export VAE_DIR="madebyollin/sdxl-vae-fp16-fix"
 
-export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/trainings/SDxl_CN_64bs_1e-5lr_80k_masked-loss"
+export OUTPUT_DIR="/home/vmorelli-iit.local/Projects/Texture-Anything/4-control_net_training/trainings/SDxl_CN_64bs_1e-5lr_80k_masked-loss"
 
-cd /leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training
+cd /home/vmorelli-iit.local/Projects/Texture-Anything/4-control_net_training
 
 # accelerate launch train_controlnet_sdxl.py \
-accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet_sdxl.py \
+python train_controlnet_sdxl.py \
     --pretrained_model_name_or_path=$SD_MODEL \
     --output_dir=$OUTPUT_DIR \
     --cache_dir=$CACHE_DIR \
