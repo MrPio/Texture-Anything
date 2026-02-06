@@ -1,6 +1,8 @@
 from functools import cached_property
 import pandas as pd
 import objaverse
+from tqdm import tqdm
+import json
 from .dataset3d import Dataset3D
 from ..blender.object3d.objaverse_object3d import ObjaverseObject3D
 
@@ -18,8 +20,13 @@ class ObjaverseDataset3D(Dataset3D):
 
     @cached_property
     def paths(self) -> tuple[dict[str, str], dict[str, int]]:
-        paths = pd.read_parquet(ObjaverseDataset3D.DATASET_DIR / "objaverse_glbs.parquet")
-        return paths["path"].to_dict(), paths["size"].to_dict()
+        if not (glbs_path := ObjaverseDataset3D.DATASET_DIR / "object-paths.json").exists():
+            glbs = {
+                p.name: str(p)
+                for p in tqdm((ObjaverseDataset3D.DATASET_DIR / "objects").rglob("*.glb"))
+            }
+            json.dump(glbs, glbs_path.open('w'))
+        return json.load(glbs_path.open())
 
     def download(self, processes=16) -> None:
         objaverse.load_objects(self.annotations.index, download_processes=processes)
