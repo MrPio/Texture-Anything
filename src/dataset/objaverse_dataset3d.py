@@ -22,7 +22,7 @@ class ObjaverseDataset3D(Dataset3D):
     def paths(self) -> tuple[dict[str, str], dict[str, int]]:
         if not (glbs_path := ObjaverseDataset3D.DATASET_DIR / "object-paths.json").exists():
             glbs = {
-                p.name: str(p)
+                p.stem: str(p)
                 for p in tqdm((ObjaverseDataset3D.DATASET_DIR / "objects").rglob("*.glb"))
             }
             json.dump(glbs, glbs_path.open('w'))

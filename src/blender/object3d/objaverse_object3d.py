@@ -28,9 +28,9 @@ class ObjaverseObject3D(Object3D):
 
     @cached_property
     def renderings(self) -> list[Image.Image]:
-        from src.dataset.shapenetcore_dataset3d import ShapeNetCoreDataset3D
+        from src.dataset.objaverse_dataset3d import ObjaverseDataset3D
 
-        path = ShapeNetCoreDataset3D.DATASET_DIR / "render"
+        path = ObjaverseDataset3D.DATASET_DIR / "render"
         renderings = [Image.open(file) for file in path.glob(f"{self.uid}*")]
         return (
             renderings

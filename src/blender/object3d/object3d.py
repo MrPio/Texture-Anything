@@ -50,9 +50,9 @@ class Object3D(abc.ABC):
             self.normalize_position()
             self.normalize_scale()
 
-    @cached_property
-    def _mesh_nodes(self, object):
+    def _mesh_nodes(self, object=None):
         nodes = []
+        object = object or self.objects[0]
         for slot in object.material_slots:
             mat = slot.material
             if mat and mat.use_nodes:
@@ -92,7 +92,6 @@ class Object3D(abc.ABC):
             bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
             obj.location -= center
 
-    @cached_property
     def mesh_stats(self, object) -> dict:
         """Get the properties of a given mesh in the current scene.
         Properties are `uv_count`, `texture_count`"""

@@ -5,7 +5,7 @@ Please make sure that you have downloaded the objects relative to the UIDs in th
 This script is CWD-independent.
 
 Usage:
-    $ srun -n 4 --mem=24G  --time=04:00:00 python 2-dataset_creation/generate_statistics.py --dataset="shapenetcore"
+    $ python generate_statistics.py
 
 Author:
     Valerio Morelli - 2025-05-08
@@ -19,17 +19,11 @@ import pandas as pd
 from tqdm import tqdm
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT_DIR))
+sys.path.append(str(ROOT_DIR))
 from src import *
-from mpi4py import MPI
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
-
-comm = MPI.COMM_WORLD
-rank, size = comm.Get_rank(), comm.Get_size()
-
 parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--demo", action="store_true")
 parser.add_argument("--dataset", type=str, default="objaverse")
 args = parser.parse_args()
 
@@ -39,49 +33,43 @@ dataset = datasets[args.dataset]()
 
 statistics = (
     dataset.statistics.drop(columns=["valid"])
-    if dataset.statistics is not None and not args.demo
+    if dataset.statistics is not None
     else pd.DataFrame(columns=["meshCount", "uvCount", "diffuseCount", "uvScore"])
 )
 statistics.index.name = "uid"
+paths = [
+    (k, v)
+    for k, v in tqdm(dataset.paths.items(), desc="Loading paths")
+    if Path(v).exists() and k not in statistics.index
+]
 
-# Loading the paths only on the root node, since it's an heavy operation
-paths = comm.bcast(
-    (
-        [
-            (k, v)
-            for k, v in tqdm(dataset.paths.items(), desc="Loading paths")
-            if Path(v).exists() and k not in statistics.index
-        ]
-        if rank == 0
-        else None
-    ),
-    root=0,
-)[rank::size]
+processed_uids = set(statistics.index).intersection(dataset.paths.keys())
+missing_uids = set(dataset.paths.keys()).difference(processed_uids)
+log("Loaded", len(processed_uids), "statistics of", len(dataset.paths))
+log("Each task has to process", len(missing_uids), "objects")
 
-if args.demo:
-    paths = paths[:4]
-if rank == 0:
-    log("Loaded", len(statistics), "statistics of", len(dataset.paths))
-    log("Each task has to process", len(paths) - len(statistics) // size, "objects")
 
-for uid, path in tqdm(paths) if rank == 0 else paths:
+def save(stats):
+    stats = stats[~stats.index.duplicated(keep="first")].sort_index()
+    stats = stats.astype(
+        {
+            "meshCount": int,
+            "uvCount": "Int64",
+            "diffuseCount": "Int64",
+            "uvScore": "Float64",
+        }
+    ).to_parquet(datasets[args.dataset].DATASET_DIR / "statistics.parquet")
+
+
+for i, uid in tqdm(enumerate(missing_uids)):
     if (obj := dataset[dict(uid=uid, silent=True, **obj_args)]) is not None:
+        has_one_mesh = len(obj.objects) == 1
+        mesh = obj.objects[0].to_mesh() if has_one_mesh else None
         statistics.loc[uid] = [
-            len(obj.meshes),
-            obj.mesh_stats["uv_count"] if obj.has_one_mesh else None,
-            obj.mesh_stats["texture_count"] if obj.has_one_mesh else None,
-            obj.uv_score if obj.has_one_mesh else None,
+            len(obj.objects),
+            obj.mesh_stats(obj.objects[0])["uv_count"] if has_one_mesh else None,
+            obj.mesh_stats(obj.objects[0])["texture_count"] if has_one_mesh else None,
+            obj.uv_score(mesh) if has_one_mesh else None,
         ]
-# Synchronize the partial results to the root task
-log("Rank", rank, "has done processing statistics.")
-all_statistics: list[pd.DataFrame] = comm.gather(statistics, root=0)
-if rank == 0:
-    concatenated = pd.concat(all_statistics)
-    final_statistics = concatenated[~concatenated.index.duplicated(keep="first")].sort_index()
-    final_statistics = final_statistics.astype(
-        {"meshCount": int, "uvCount": "Int64", "diffuseCount": "Int64", "uvScore": "Float64"}
-    )
-    if args.demo:
-        log(final_statistics)
-    else:
-        final_statistics.to_parquet(datasets[args.dataset].DATASET_DIR / "statistics.parquet")
+    if i % 100 == 0:
+        save(statistics)
