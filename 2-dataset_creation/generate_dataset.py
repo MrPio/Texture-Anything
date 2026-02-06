@@ -2,12 +2,8 @@
 Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse texture.
 This script is CWD-independent
 
-Usage:
-    $ srun -n 8 --mem=30G  --time=04:00:00 python generate_dataset.py --dataset="shapenetcore" --regenerate-uv --render
-    $ srun -n 8 --mem=30G  --time=04:00:00 python generate_dataset.py --dataset="objaverse" --render --split ../dataset/objaverse/missing_thumbnails.txt
-
 Author:
-    Valerio Morelli - 2025-05-08
+    Valerio Morelli - February 6, 2026
 """
 
 from time import time_ns
@@ -18,18 +14,14 @@ from pathlib import Path
 import bpy
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT_DIR))
+sys.path.append(str(ROOT_DIR))
 from src import *
-from mpi4py import MPI
 import argparse
 from torch.cuda import is_available as has_cuda
 
 MIN_UV_DENSITY = 0.0085
-MIN_UV_SCORE = 0.55
+MIN_UV_SCORE = 0.6
 MAX_SIZE = 4 * 2**20  # 4 MiB
-comm = MPI.COMM_WORLD
-rank, size = comm.Get_rank(), comm.Get_size()
-cprint("Rank:", rank, "Size:", size)
 
 
 def parse_args():
@@ -47,18 +39,23 @@ args = parse_args()
 dataset = datasets[args.dataset]()
 conv_filter = LaplacianFilter()
 DIR = dataset.DATASET_DIR
-# uids = dataset.statistics[dataset.statistics["valid"]].index[rank::size]
-paths, sizes = dataset.paths
-uids = set(paths.keys())
-if args.split:
-    split = open(args.split).read().split("\n")
-    uids = uids.intersection(split)
+paths = dataset.paths
+valid_uids = dataset.statistics[dataset.statistics["valid"]].index
+avail_uids = set(paths.keys())
+done_uids = {} if args.overwrite else {file.stem for file in (DIR / "uv").glob("*")}
+uids = avail_uids.intersection(valid_uids).difference(done_uids)
 
-# processed_uids = {} if args.overwrite else {file.stem for file in (DIR / "uv").glob("*")}
-# uids = set(uids).difference(processed_uids)
-cprint("Need to process", len(uids), "uids")
-uids = list(uids)[rank::size]
-cprint(f"[Rank {rank}/{size}] I have", len(uids), "uids")
+cprint(
+    "Need to process",
+    len(uids),
+    "uids out of a total of",
+    len(avail_uids),
+    "available, and",
+    len(valid_uids),
+    "valid.",
+    len(done_uids),
+    "have already been processed.",
+)
 
 # Optimization --------------------------------
 if args.regenerate_uv:
@@ -69,14 +66,16 @@ if args.regenerate_uv:
     log("Device=", f"red:{device}")
 # ---------------------------------------------
 
-for uid in tqdm(uids, disable=rank != 0):
+for uid in tqdm(uids):
     # Load the object into the blender scene
-    if sizes[uid] > MAX_SIZE or (obj := dataset[dict(uid=uid, preprocess=args.render, silent=True)]) is None:
+    path = Path(paths[uid])
+    if (size := path.stat().st_size) > MAX_SIZE or (
+        obj := dataset[dict(uid=uid, preprocess=args.render, silent=True)]
+    ) is None:
         ObjaverseObject3D(uid, paths[uid], preprocess=True)
-        print(sizes[uid], obj is None)
+        cprint("red:Found object of invalid size", f"yellow:{size/2**20:.2f} MiB")
         continue
 
-    print(args.render, (DIR / "render" / f"{uid}.png").exists())
     # Renderings
     if args.render and (args.overwrite or not (DIR / "render" / f"{uid}.png").exists()):
         renderings = obj.render(samples=1, views=1, size=(512, 512))

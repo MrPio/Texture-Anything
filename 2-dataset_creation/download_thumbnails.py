@@ -22,7 +22,7 @@ uids = uids.difference(processed)
 log("I will now download the missing", len(uids), "thumbnails")
 
 thumbnails = pd.read_parquet(dataset.DATASET_DIR / "thumbnails_checked.parquet")["thumbnail"]
-missing = uids.difference(thumbnails)
+missing = uids.difference(thumbnails.index)
 log("Unfortunately,", len(missing), "thumbnails are missing from thumbnails_checked.parquet")
 open("missing_thumbnails.txt", "w").write("\n".join(missing))
 uids = uids.difference(missing)
@@ -30,14 +30,15 @@ OUTPUT_DIR = dataset.DATASET_DIR / "render"
 
 
 def download_thumbnail(uid):
-    url = thumbnails.get(uid)
-    if (OUTPUT_DIR / f"{uid}.png").exists() or url is None:
-        return uid, None
-    thumbnail = requests.get(url).content
-    try:
-        img = PILImage.open(BytesIO(thumbnail))
-    except:
-        img = None
+    if uid in thumbnails:
+        url = thumbnails.loc[uid]
+        if (OUTPUT_DIR / f"{uid}.png").exists() or url is None:
+            return uid, None
+        thumbnail = requests.get(url).content
+        try:
+            img = PILImage.open(BytesIO(thumbnail))
+        except:
+            img = None
     return uid, img
 
 
@@ -48,13 +49,3 @@ with multiprocessing.Pool(2) as pool:
         if img is None or img.size[0] * img.size[1] < MIN_RENDER_MEGAPIXEL:
             continue
         img.save(OUTPUT_DIR / f"{uid}.png")
-
-# with ThreadPoolExecutor(max_workers=2) as executor:
-#     futures = {executor.submit(download_thumbnail, uid): uid for uid in uids}
-
-#     for future in tqdm(as_completed(futures), total=len(uids), desc="Downloading"):
-#         uid = futures[future]
-#         img = future.result()
-#         if img is None or img.size[0] * img.size[1] < MIN_RENDER_MEGAPIXEL:
-#             continue
-#         img.save(OUTPUT_DIR / f"{uid}.png")

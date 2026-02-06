@@ -8,7 +8,7 @@ Usage:
     $ python generate_statistics.py
 
 Author:
-    Valerio Morelli - 2025-05-08
+    Valerio Morelli - February 5, 2026
 """
 
 import argparse

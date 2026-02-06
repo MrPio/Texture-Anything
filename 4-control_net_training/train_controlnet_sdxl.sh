@@ -1,27 +1,8 @@
-#!/bin/bash
-
-# To run a new training, please make sure to set:
-# - Accelerate's --num_processes=<NUM_GPUS>
-# - The name of the train in $OUTPUT_DIR
-# - A number of --epochs compatible with the logic batch size
-
-#SBATCH --job-name=controlnet_sdxl
-#SBATCH --output=controlnet_sdxl.log
-#SBATCH --error=controlnet_sdxl.log
-#SBATCH --time=24:00:00
-#SBATCH --partition=boost_usr_prod
-##SBATCH --qos=boost_qos_dbg
-#SBATCH --gres=gpu:2
-#SBATCH --mem=42G
-
 export SD_MODEL="stabilityai/stable-diffusion-xl-base-1.0"
-export CACHE_DIR="/home/vmorelli-iit.local/Projects/Texture-Anything/.huggingface"
-export DATASET_DIR="/home/vmorelli-iit.local/Projects/Texture-Anything/4-control_net_training/dataset"
 export VAE_DIR="madebyollin/sdxl-vae-fp16-fix"
-
-export OUTPUT_DIR="/home/vmorelli-iit.local/Projects/Texture-Anything/4-control_net_training/trainings/SDxl_CN_64bs_1e-5lr_80k_masked-loss"
-
-cd /home/vmorelli-iit.local/Projects/Texture-Anything/4-control_net_training
+export CACHE_DIR="../.huggingface"
+export DATASET_DIR="dataset"
+export OUTPUT_DIR="trainings/SDxl_CN_64bs_1e-5lr_80k_masked-loss"
 
 # accelerate launch train_controlnet_sdxl.py \
 python train_controlnet_sdxl.py \
@@ -37,8 +18,8 @@ python train_controlnet_sdxl.py \
     \
     --resolution=512 \
     --num_train_epochs=50 \
-    --learning_rate=1e-5 \
-    --train_batch_size=8 \
+    --learning_rate=1.5e-5 \
+    --train_batch_size=4 \
     --gradient_accumulation_steps=4 \
     --mixed_precision="fp16" \
     --checkpointing_steps=1000 \
@@ -46,8 +27,8 @@ python train_controlnet_sdxl.py \
     --seed=42 \
     \
     --validation_image \
-    "validation/uv/0adf456c59094a3da23329a6d27cb239.png" \
-    "validation/uv/3b15c410f87f42daa7e8cb5b5f74e3f1.png" \
+    "validation/uv/8699d1508975469fbfb70d8b96d937e4_0.png" \
+    "validation/uv/ea7fc3f240694f82adb2a38e7946c792_0.png" \
     --validation_prompt \
-    "a dark brown, metallic gear with a rough, industrial texture, featuring sharp teeth and a central hole, suggesting a robust and durable design." \
-    "a delicate, ornate silver plate with intricate floral patterns and a glossy finish, reflecting light subtly."
+    "a polished, reflective pyramid with a glossy finish, showcasing a gradient of colors from white to red, with a shadow indicating a light source from the upper left." \
+    "a 3d rendered image of a gray, matte, and textured object with a rough surface and visible cracks."

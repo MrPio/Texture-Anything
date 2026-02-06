@@ -2,10 +2,6 @@
 """
 Distributed 3D Render Captioning Script using Phi 3.5 Vision Instruct and MPI.
 
-Usage:
-    $ srun -n 8 --ntasks-per-node=4 --mem=32G --gpus-per-task=1 --partition=boost_usr_prod python generate_captions_phi3.5.py
-    (Takes ~0.5s/it on A100)
-
 Arguments:
     --input   (str): Path to directory containing input images.
     --output  (str): Path to the JSON file.
@@ -15,8 +11,11 @@ Arguments:
 Based on
     https://huggingface.co/microsoft/Phi-3.5-vision-instruct
 
+Dependency:
+    pip install "transformers==4.43.0"
+
 Author:
-    Valerio Morelli - 2025-05-12
+    Valerio Morelli - February 6, 2026
 """
 import argparse
 import json
@@ -27,14 +26,13 @@ from tqdm import tqdm
 from PIL import Image
 from transformers import AutoModelForCausalLM
 from transformers import AutoProcessor
-from mpi4py import MPI
 from torch.cuda import is_available as is_cuda_available
 from random import randint
 from transformers.image_processing_utils import BatchFeature
 import sys
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT_DIR))
+sys.path.append(str(ROOT_DIR))
 from src import *
 
 
@@ -51,12 +49,9 @@ args = parse_args()
 CACHE_PATH = ROOT_DIR / ".huggingface"
 OUTPUT_DIR = ROOT_DIR / args.output
 OUTPUT_DIR.parent.mkdir(exist_ok=True, parents=True)
-BATCH_SIZE = 16
+BATCH_SIZE = 4
 NUM_CROPS = 8
 DTYPE = torch.bfloat16  # use bf16 (preferred on A100) or fp16
-
-comm = MPI.COMM_WORLD
-rank, size = comm.Get_rank(), comm.Get_size()
 
 captions = {}
 if OUTPUT_DIR.parent.exists():
@@ -72,10 +67,8 @@ paths = [paths[i : i + args.samples] for i in range(0, len(paths), args.samples)
 
 if args.demo:
     paths = paths[: args.samples * BATCH_SIZE * 4]
-if rank == 0:
-    log("Already processed", f"blue:{len(captions):,}", "captions of a total of", f"{len(paths)+len(captions):,}")
-    log("Each task has", f"red:{len(paths) // size:,}", "captions, each observing", args.samples, "renderings")
-paths = paths[rank::size]
+log("Already processed", f"blue:{len(captions):,}", "captions of a total of", f"{len(paths)+len(captions):,}")
+log("Each task has", f"red:{len(paths):,}", "captions, each observing", args.samples, "renderings")
 
 device = "cuda" if is_cuda_available() else "cpu"
 model_id = "microsoft/Phi-3.5-vision-instruct"
@@ -110,6 +103,7 @@ generation_args = {
 prompt = processor.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 cache_suffix = randint(1e6, 1e7 - 1)
 
+
 # Based on: https://huggingface.co/microsoft/Phi-3.5-vision-instruct/discussions/5#66c6fa5859ff3e4811b4349b
 def stack_and_pad_inputs(inputs: list[BatchFeature], pad_token_id: int) -> BatchFeature:
     listof_input_ids = [i.input_ids[0] for i in inputs]
@@ -137,7 +131,7 @@ batches = [paths[i : i + BATCH_SIZE] for i in range(0, len(paths), BATCH_SIZE)]
 invalid_images_uids = []
 with torch.no_grad():
     with torch.amp.autocast("cuda", dtype=DTYPE):
-        for i, batch in enumerate(tqdm(batches, disable=rank != 0)):
+        for i, batch in enumerate(tqdm(batches)):
             uids = [sample[0].stem.split("_")[0] for sample in batch]
             assert args.samples == 1
             listof_inputs: list[BatchFeature] = []
@@ -171,15 +165,11 @@ with torch.no_grad():
 
             # Save partial results, just in case
             if not args.demo and i % 10 == 0:
-                log(f"[Rank {rank}/{size}] [{i}] EXPORTING...")
-                with open(str(OUTPUT_DIR).replace(".json", f"_{rank}_{cache_suffix}.json"), "w") as f:
+                with open(str(OUTPUT_DIR).replace(".json", f"_{cache_suffix}.json"), "w") as f:
                     json.dump(captions, f, indent=4)
 
 # Syncronize the partial results to the root task
-all_captions = comm.gather(captions, root=0)
-if rank == 0:
-    all_captions = {k: v for d in all_captions for k, v in d.items()}
-    with open(OUTPUT_DIR, "w") as f:
-        json.dump(all_captions, f, indent=4)
-    if args.demo:
-        log("Now you have", f"blue:{len(captions):,}", "captions")
+with open(OUTPUT_DIR, "w") as f:
+    json.dump(captions, f, indent=4)
+if args.demo:
+    log("Now you have", f"blue:{len(captions):,}", "captions")

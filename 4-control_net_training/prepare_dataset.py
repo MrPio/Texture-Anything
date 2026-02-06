@@ -12,16 +12,16 @@ import numpy as np
 
 FILE_DIR = Path(__file__).resolve().parent
 sys.path.append(str(FILE_DIR.parent))
-from src import datasets, Dataset3D, LaplacianFilter, cprint
+from src import datasets, Dataset3D, LaplacianFilter, cprint, ObjaverseDataset3D
 
 MAX_DATASET_SIZE = None  # 1_000
 TARGET_SIZE = (512, 512)
-DATASETS: list[Dataset3D] = [_() for _ in datasets.values()]
+DATASETS: list[Dataset3D] = [ObjaverseDataset3D()]
 BLACK_TRESHOLD = 0.66
 OUTPUT_PATH = Path(FILE_DIR / "dataset").resolve()
 VALIDATION_UIDS = [
-    # "1305b9266d38eb4d9f818dd0aa1a251",  # "0adf456c59094a3da23329a6d27cb239",
-    # "1de679dd26d8c69cae44c65a6d0f0732",  # "3b15c410f87f42daa7e8cb5b5f74e3f1",
+     "1305b9266d38eb4d9f818dd0aa1a251",   "0adf456c59094a3da23329a6d27cb239",
+     "1de679dd26d8c69cae44c65a6d0f0732",  "3b15c410f87f42daa7e8cb5b5f74e3f1",
 ]
 TESTSET_SIZE = 50  # diffusers train script doesn't use a test set
 TEST_UIDS = (FILE_DIR / "testset_uids.txt").read_text().split("\n")
@@ -56,7 +56,7 @@ for dataset in DATASETS:
     if MAX_DATASET_SIZE:
         uids = list(set(uids[:MAX_DATASET_SIZE] + VALIDATION_UIDS))
     test_uids = TEST_UIDS if TEST_UIDS else choice(uids, size=TESTSET_SIZE, replace=False)
-    cprint(f"yellow:{dataset.__class__.__name__}", "has", len(uids))
+    cprint(f"yellow:{dataset.__class__.__name__}", "has", len(uids), "objects")
 
     uv_paths = {x.stem: x for x in (dataset.DATASET_DIR / "uv").glob("*") if x.suffix in dataset.IMG_EXT}
     diffuse_paths = {x.stem: x for x in (dataset.DATASET_DIR / "diffuse").glob("*") if x.suffix in dataset.IMG_EXT}
