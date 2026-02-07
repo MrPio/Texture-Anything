@@ -5,9 +5,8 @@ Usage:
     $ srun --mem=24G --gres=gpu:1 --time=00:08:00 --partition=boost_usr_prod --qos=boost_qos_dbg \
         python infer_controlnet.py \
             --sd="stabilityai/stable-diffusion-xl-base-1.0" \
-            --cnet="SD1xl_CN_32bs_1e-5lr_8k_latent-loss" \
-            --checkpoint=7000 \
-            --no-invert-uv
+            --cnet="SDxl_CN_8bs_165e-5lr_2k_masked-loss" \
+            --checkpoint=7000
             
 Based on: https://github.com/huggingface/diffusers/tree/main/examples/controlnet
 """
@@ -70,10 +69,17 @@ def parse_args():
     output_dir = (
         Path(__file__).parent
         / "tests"
-        / (args.cnet.replace("/", "-") + (f"_{args.checkpoint}s" if args.checkpoint else ""))
+        / (
+            args.cnet.replace("/", "-")
+            + (f"_{args.checkpoint}s" if args.checkpoint else "")
+        )
     )
     if output_dir.exists():
-        print("WARNING: This model already has prediction in", output_dir, "You have 5 seconds to abort...")
+        print(
+            "WARNING: This model already has prediction in",
+            output_dir,
+            "You have 5 seconds to abort...",
+        )
         sleep(5)
     print("args.invert_uv=", args.invert_uv)
     return args
@@ -81,13 +87,23 @@ def parse_args():
 
 args = parse_args()
 CNET_MODEL = (
-    (Path(__file__).parent / "trainings" / args.cnet / f"checkpoint-{args.checkpoint}" / "controlnet")
+    (
+        Path(__file__).parent
+        / "trainings"
+        / args.cnet
+        / f"checkpoint-{args.checkpoint}"
+        / "controlnet"
+    )
     if args.checkpoint
     else args.cnet
 )
 
 # Load dataset =============================================================
-testset = pd.read_csv(TESTSET_DIR / "metadata.csv").iloc[: args.samples]
+testset = pd.read_json(
+    TESTSET_DIR / "metadata.jsonl",
+    orient="records",
+    lines=True,
+).iloc[: args.samples]
 
 # Loading pipeline =========================================================
 import PIL
@@ -107,21 +123,23 @@ controlnet = ControlNetModel.from_pretrained(
     pretrained_model_name_or_path=str(CNET_MODEL),
     cache_dir=CACHE_DIR,
     torch_dtype=torch.float16,
-    local_files_only=True,
 )
-pipe = (StableDiffusionXLControlNetPipeline if "xl" in args.sd else StableDiffusionControlNetPipeline).from_pretrained(
+pipe = (
+    StableDiffusionXLControlNetPipeline
+    if "xl" in args.sd
+    else StableDiffusionControlNetPipeline
+).from_pretrained(
     pretrained_model_name_or_path=args.sd,
     controlnet=controlnet,
     torch_dtype=torch.float16,
     cache_dir=CACHE_DIR,
-    local_files_only=True,
     safety_checker=None,
 )
 
 # speed up diffusion process with faster scheduler and memory optimization
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config)
 # remove following line if xformers is not installed or when using Torch 2.0.
-pipe.enable_xformers_memory_efficient_attention()
+# pipe.enable_xformers_memory_efficient_attention()
 # memory optimization.
 pipe.enable_model_cpu_offload()
 
@@ -132,5 +150,7 @@ for _, row in tqdm(testset.iterrows()):
     control_image = PIL.Image.open(TESTSET_DIR / row.uv_file_name).convert("RGB")
     if args.invert_uv:
         control_image = PIL.ImageOps.invert(control_image)
-    image = pipe(row.caption, num_inference_steps=20, generator=generator, image=control_image).images[0]
+    image = pipe(
+        row.caption, num_inference_steps=20, generator=generator, image=control_image
+    ).images[0]
     image.save(output_dir / f"{Path(row.uv_file_name).stem}.png")
