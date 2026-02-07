@@ -20,8 +20,10 @@ DATASETS: list[Dataset3D] = [ObjaverseDataset3D()]
 BLACK_TRESHOLD = 0.66
 OUTPUT_PATH = Path(FILE_DIR / "dataset").resolve()
 VALIDATION_UIDS = [
-     "1305b9266d38eb4d9f818dd0aa1a251",   "0adf456c59094a3da23329a6d27cb239",
-     "1de679dd26d8c69cae44c65a6d0f0732",  "3b15c410f87f42daa7e8cb5b5f74e3f1",
+    "1305b9266d38eb4d9f818dd0aa1a251",
+    "0adf456c59094a3da23329a6d27cb239",
+    "1de679dd26d8c69cae44c65a6d0f0732",
+    "3b15c410f87f42daa7e8cb5b5f74e3f1",
 ]
 TESTSET_SIZE = 50  # diffusers train script doesn't use a test set
 TEST_UIDS = (FILE_DIR / "testset_uids.txt").read_text().split("\n")
@@ -50,22 +52,38 @@ for dir in [train_dir, test_dir, valid_dir]:
     for folder in ["diffuse", "uv"]:
         (OUTPUT_PATH / dir / folder).mkdir(parents=True, exist_ok=True)
 
-metadata = pd.DataFrame(columns=["uv_file_name", "diffuse_file_name", "caption", "mask", "split"])
+metadata = pd.DataFrame(
+    columns=["uv_file_name", "diffuse_file_name", "caption", "mask", "split"]
+)
 for dataset in DATASETS:
     uids = list(dataset.triplets)
     if MAX_DATASET_SIZE:
         uids = list(set(uids[:MAX_DATASET_SIZE] + VALIDATION_UIDS))
-    test_uids = TEST_UIDS if TEST_UIDS else choice(uids, size=TESTSET_SIZE, replace=False)
+    test_uids = (
+        TEST_UIDS if TEST_UIDS else choice(uids, size=TESTSET_SIZE, replace=False)
+    )
     cprint(f"yellow:{dataset.__class__.__name__}", "has", len(uids), "objects")
 
-    uv_paths = {x.stem: x for x in (dataset.DATASET_DIR / "uv").glob("*") if x.suffix in dataset.IMG_EXT}
-    diffuse_paths = {x.stem: x for x in (dataset.DATASET_DIR / "diffuse").glob("*") if x.suffix in dataset.IMG_EXT}
+    uv_paths = {
+        x.stem: x
+        for x in (dataset.DATASET_DIR / "uv").glob("*")
+        if x.suffix in dataset.IMG_EXT
+    }
+    diffuse_paths = {
+        x.stem: x
+        for x in (dataset.DATASET_DIR / "diffuse").glob("*")
+        if x.suffix in dataset.IMG_EXT
+    }
     mask_paths = {x.stem: x for x in (dataset.DATASET_DIR / "mask").glob("*.npy")}
     captions = dataset.captions
 
     for uid in tqdm(uids):
         try:
-            split = test_dir if uid in test_uids else valid_dir if uid in VALIDATION_UIDS else train_dir
+            split = (
+                test_dir
+                if uid in test_uids
+                else valid_dir if uid in VALIDATION_UIDS else train_dir
+            )
             diffuse = Image.open(diffuse_paths[uid])
             if diffuse.size[0] != diffuse.size[1]:
                 continue
@@ -105,7 +123,13 @@ for dataset in DATASETS:
         metadata.index += 1
 
 for dir in [train_dir, test_dir, valid_dir]:
-    metadata[metadata["split"] == dir].drop(columns=["split"]).to_csv(OUTPUT_PATH / dir / "metadata.csv", index=False)
+    metadata[metadata["split"] == dir].drop(columns=["split"]).to_json(
+        OUTPUT_PATH / dir / "metadata.jsonl",
+        orient="records",
+        lines=True,
+        force_ascii=False,
+        index=False,
+    )
 
 size = sum(f.stat().st_size for f in (OUTPUT_PATH).glob("**/*") if f.is_file())
 cprint("Dataset size:", size // 1024**2, "green:MiB")
