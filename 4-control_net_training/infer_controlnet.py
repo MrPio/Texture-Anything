@@ -4,9 +4,8 @@ Generate predictions over the testset. CWD-independent.
 Usage:
     $ srun --mem=24G --gres=gpu:1 --time=00:08:00 --partition=boost_usr_prod --qos=boost_qos_dbg \
         python infer_controlnet.py \
-            --sd="stabilityai/stable-diffusion-xl-base-1.0" \
-            --cnet="SDxl_CN_8bs_165e-5lr_2k_masked-loss" \
-            --checkpoint=7000
+            --sd="stable-diffusion-v1-5/stable-diffusion-v1-5" \
+            --cnet="MrPio/Texture-Anything_CNet-SD15"
             
 Based on: https://github.com/huggingface/diffusers/tree/main/examples/controlnet
 """

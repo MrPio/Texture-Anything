@@ -5,7 +5,13 @@ import io
 import random
 import torch
 from pathlib import Path
-from diffusers import ControlNetModel, StableDiffusionControlNetPipeline, UniPCMultistepScheduler
+from diffusers import (
+    ControlNetModel,
+    StableDiffusionControlNetPipeline,
+    UniPCMultistepScheduler,
+    StableDiffusionXLControlNetPipeline,
+)
+
 from PIL import Image, ImageOps
 from huggingface_hub import login
 import os
@@ -21,16 +27,19 @@ dotenv.load_dotenv()
 login(os.environ["HF_TOKEN"])
 
 # ---- Model loading ----
-CACHE_DIR = Path(__file__).parent / ".cache"
-CNET_MODEL = "MrPio/Texture-Anything_CNet-SD15"
-SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"
+CACHE_DIR = Path(__file__).parents[1] / ".huggingface"
+CNET_MODEL = "MrPio/Texture-Anything_CNet-SD15"  # "../4-control_net_training/trainings/SDxl_CN_24bs_165e-5lr_2k_masked-loss/checkpoint-8200/controlnet"
+SD_MODEL = "stable-diffusion-v1-5/stable-diffusion-v1-5"  # "stabilityai/stable-diffusion-xl-base-1.0"
 
+is_xl = "xl" in SD_MODEL
 controlnet = ControlNetModel.from_pretrained(
     CNET_MODEL,
     cache_dir=CACHE_DIR,
     torch_dtype=torch.float16,
 )
-pipe = StableDiffusionControlNetPipeline.from_pretrained(
+pipe = (
+    StableDiffusionXLControlNetPipeline if "xl" in SD_MODEL else StableDiffusionControlNetPipeline
+).from_pretrained(
     SD_MODEL,
     controlnet=controlnet,
     cache_dir=CACHE_DIR,
@@ -71,7 +80,14 @@ def infer(caption: str, condition_image: Image.Image, steps: int = 20, seed: int
 
     print("Starting generation...")
     generator = torch.manual_seed(seed)
-    output = pipe(prompt=caption, image=img, num_inference_steps=steps, generator=generator).images[0]
+    output = pipe(
+        prompt=caption,
+        image=img,
+        num_inference_steps=steps,
+        generator=generator,
+        height=1024 if is_xl else 512,
+        width=1024 if is_xl else 512,
+    ).images[0]
     print("Caching result...")
     output.save(cache_file)
     return output
