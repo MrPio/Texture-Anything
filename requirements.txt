@@ -17,3 +17,6 @@ trimesh
 rich
 termcolor
 scipy
+piq
+brisque
+pillow
