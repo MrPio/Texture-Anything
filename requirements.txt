@@ -20,3 +20,6 @@ scipy
 piq
 brisque
 pillow
+torchmetrics
+torchmetrics[image]
+torch-fidelity

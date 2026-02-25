@@ -23,6 +23,9 @@ datasets: dict[str, type[Dataset3D]] = {
 # Filters
 from .conv_filter import SobelFilter, PrewittFilter, LaplacianFilter
 
+# Metrics
+from .metrics import *
+
 # Misc
 from .utils import imshow, compute_image_density, is_textured, bpy2pil, flatten, is_outside_uv, mkdir
 from .logger import log, cprint
@@ -30,6 +33,7 @@ from .logger import log, cprint
 # Initialization
 import seaborn as sns
 import bpy
+from tqdm import tqdm
 
 sns.set(style="darkgrid", context="notebook", font_scale=1.15)
 bpy.context.preferences.edit.use_global_undo = False
