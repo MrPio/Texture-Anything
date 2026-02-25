@@ -15,7 +15,6 @@ import bpy
 from PIL import Image, ImageDraw
 import bmesh
 import math
-import numpy as np
 from mathutils import Vector
 
 
@@ -64,6 +63,34 @@ class Object3D(abc.ABC):
                                     nodes.append(node)
         return nodes
 
+    def _mesh_objects(self) -> list[bpy.types.Object]:
+        return [obj for obj in bpy.data.objects if obj.type == "MESH"]
+
+    def _scene_bounds(self, objs: Optional[list[bpy.types.Object]] = None) -> tuple[Vector, Vector]:
+        objs = objs or self._mesh_objects()
+        if len(objs) == 0:
+            raise RuntimeError("No mesh objects found in the scene.")
+
+        min_corner = Vector((float("inf"), float("inf"), float("inf")))
+        max_corner = Vector((float("-inf"), float("-inf"), float("-inf")))
+        for obj in objs:
+            for corner in obj.bound_box:
+                world_corner = obj.matrix_world @ Vector(corner)
+                min_corner.x = min(min_corner.x, world_corner.x)
+                min_corner.y = min(min_corner.y, world_corner.y)
+                min_corner.z = min(min_corner.z, world_corner.z)
+                max_corner.x = max(max_corner.x, world_corner.x)
+                max_corner.y = max(max_corner.y, world_corner.y)
+                max_corner.z = max(max_corner.z, world_corner.z)
+
+        return min_corner, max_corner
+
+    def _scene_center_and_radius(self, objs: Optional[list[bpy.types.Object]] = None) -> tuple[Vector, float]:
+        min_corner, max_corner = self._scene_bounds(objs)
+        center = (min_corner + max_corner) * 0.5
+        radius = max((max_corner - min_corner).length * 0.5, 1e-6)
+        return center, radius
+
     def normalize_scale(self):
         sizes = []
         for obj in bpy.data.objects:
@@ -79,18 +106,26 @@ class Object3D(abc.ABC):
                 bpy.ops.object.transform_apply(scale=True)
 
     def normalize_position(self):
-        objs = [obj for obj in bpy.data.objects if obj.type == "MESH"]
-        # Compute the scene centroid
-        total_loc = Vector((0, 0, 0))
-        for obj in objs:
-            total_loc += obj.location
-        center = total_loc / len(objs)
+        objs = self._mesh_objects()
+        if len(objs) == 0:
+            return
 
-        # Set origin to geometry bounds for each object, then move all relative to center
+        with contextlib.suppress(Exception):
+            bpy.ops.object.mode_set(mode="OBJECT")
+
+        bpy.ops.object.select_all(action="DESELECT")
+        # Set each mesh origin to its own geometry first.
         for obj in objs:
+            obj.select_set(True)
             bpy.context.view_layer.objects.active = obj
             bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
-            obj.location -= center
+            obj.select_set(False)
+
+        # Recenter all mesh objects around the global geometric center.
+        min_corner, max_corner = self._scene_bounds(objs)
+        center = (min_corner + max_corner) * 0.5
+        for obj in objs:
+            obj.matrix_world.translation -= center
 
     def mesh_stats(self, object) -> dict:
         """Get the properties of a given mesh in the current scene.
@@ -302,13 +337,23 @@ class Object3D(abc.ABC):
         views=4,
         save_scene: Optional[str | Path] = None,
         light_strength=1.75,
+        fov=45.0,
     ) -> list[Image.Image]:
+        if views < 1:
+            return []
+        if not 1.0 < fov < 179.0:
+            raise ValueError("`fov` must be in degrees and in range (1, 179).")
+
         scene = bpy.context.scene
 
         # Add camera
-        camera = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
+        camera_data = bpy.data.cameras.new("Camera")
+        camera = bpy.data.objects.new("Camera", camera_data)
         scene.collection.objects.link(camera)
         scene.camera = camera
+        camera_data.lens_unit = "FOV"
+        camera_data.sensor_fit = "VERTICAL"
+        camera_data.angle = math.radians(fov)
 
         # Setup light
         load_hdri(Object3D.HDRI_PATH, rotation=0, strength=light_strength)
@@ -318,25 +363,46 @@ class Object3D(abc.ABC):
         scene.render.engine = "CYCLES"
         scene.cycles.samples = samples
         scene.render.resolution_x, scene.render.resolution_y = size
+        scene.render.image_settings.file_format = "PNG"
+        scene.render.image_settings.color_mode = "RGBA"
+
+        # Fit camera to full object bounds.
+        objs = self._mesh_objects()
+        center, radius = self._scene_center_and_radius(objs)
+        aspect_ratio = scene.render.resolution_x / max(scene.render.resolution_y, 1)
+        vertical_fov = math.radians(fov)
+        horizontal_fov = 2.0 * math.atan(math.tan(vertical_fov * 0.5) * aspect_ratio)
+        min_half_fov = min(vertical_fov, horizontal_fov) * 0.5
+        fit_distance = (radius / math.sin(min_half_fov)) * 1.10
+        radius = max(radius, 1e-3)
+        orbit_distance = max(distance, fit_distance)
+
+        camera_data.clip_start = max(0.001, orbit_distance - (radius * 2.0))
+        camera_data.clip_end = max(100.0, orbit_distance + (radius * 5.0))
 
         # Launch rendering
-        radius = distance
         images = []
-        if views < 1:
-            return
-        for ang in map(math.radians, tqdm(range(45, 45 + 360, 360 // views))):
-            scene.camera.location = Vector(
-                (radius * math.cos(ang), radius * math.sin(ang), radius * math.cos(ang) / 2)
+        azimuth_step = 360.0 / views
+        elevation = math.radians(20.0)
+        for i in tqdm(range(views)):
+            azimuth = math.radians(45.0 + (azimuth_step * i))
+            camera_direction = Vector(
+                (
+                    math.cos(azimuth) * math.cos(elevation),
+                    math.sin(azimuth) * math.cos(elevation),
+                    math.sin(elevation),
+                )
             )
-            scene.camera.rotation_euler = (
-                (Vector((0, 0, 0)) - scene.camera.location).to_track_quat("-Z", "Y").to_euler()
-            )
+            scene.camera.location = center + (camera_direction * orbit_distance)
+            scene.camera.rotation_euler = ((center - scene.camera.location).to_track_quat("-Z", "Y").to_euler())
+
             fd, path = tempfile.mkstemp(suffix=".png")
             os.close(fd)
             scene.render.filepath = path
             bpy.ops.render.render(write_still=True)
 
-            img = Image.open(path).convert("RGBA")
+            with Image.open(path) as rendered:
+                img = rendered.convert("RGBA")
             images.append(img)
             os.remove(path)
 

@@ -1,5 +1,6 @@
 import math
 from pathlib import Path
+import shutil
 from PIL import Image
 import torch
 import torch.nn.functional as F
@@ -121,3 +122,16 @@ def is_outside_uv(vector, threshold=0.15):
         if not -threshold < coord < 1 + threshold:
             return True
     return False
+
+def mkdir(path: str | Path, clear=False) -> Path:
+    """Creates the dir leading to a path recursively and returns it.
+
+    Args:
+        path (str | Path): the path to create
+        clear (bool, optional): whether to clear the folder content
+    """
+    path = Path(path)
+    if clear and path.exists():
+        shutil.rmtree(path)
+    path.mkdir(exist_ok=True, parents=True)
+    return path

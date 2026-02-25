@@ -24,7 +24,7 @@ datasets: dict[str, type[Dataset3D]] = {
 from .conv_filter import SobelFilter, PrewittFilter, LaplacianFilter
 
 # Misc
-from .utils import imshow, compute_image_density, is_textured, bpy2pil, flatten, is_outside_uv
+from .utils import imshow, compute_image_density, is_textured, bpy2pil, flatten, is_outside_uv, mkdir
 from .logger import log, cprint
 
 # Initialization

@@ -4,8 +4,8 @@ Generate predictions over the testset. CWD-independent.
 Usage:
     $ srun --mem=24G --gres=gpu:1 --time=00:08:00 --partition=boost_usr_prod --qos=boost_qos_dbg \
         python infer_controlnet.py \
-            --sd="stable-diffusion-v1-5/stable-diffusion-v1-5" \
-            --cnet="MrPio/Texture-Anything_CNet-SD15"
+            --sd="stabilityai/stable-diffusion-xl-base-1.0" \
+            --cnet="SDxl_CN_24bs_165e-5lr_2k_masked-loss/checkpoint-8200/controlnet"
             
 Based on: https://github.com/huggingface/diffusers/tree/main/examples/controlnet
 """
@@ -52,7 +52,7 @@ def parse_args():
     parser.add_argument(
         "--samples",
         type=int,
-        default=30,
+        default=999,
         help="The number of samples to consider in the test set.",
     )
     parser.add_argument(
@@ -150,6 +150,6 @@ for _, row in tqdm(testset.iterrows()):
     if args.invert_uv:
         control_image = PIL.ImageOps.invert(control_image)
     image = pipe(
-        row.caption, num_inference_steps=20, generator=generator, image=control_image
+        row.caption, num_inference_steps=30, generator=generator, image=control_image
     ).images[0]
     image.save(output_dir / f"{Path(row.uv_file_name).stem}.png")

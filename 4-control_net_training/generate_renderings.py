@@ -1,47 +1,31 @@
 import sys
 from pathlib import Path
-import pandas as pd
+from tqdm import tqdm
 
-sys.path.append(str(Path("..").resolve()))
+sys.path.append("..")
 from src import *
 
 dataset = ObjaverseDataset3D()
 
-TESTSET_DIR = Path("./dataset/test")
-gt_dir = TESTSET_DIR / "diffuse"
-vanilla_dir = Path("tests/lllyasviel-sd-controlnet-mlsd")
-trained_dir = Path("tests/SD1.5_CNmlsd_64bs_1e-5lr_8k_combined-loss_7000s")
-trained_dir2 = Path("tests/SDxl_CN_32bs_1e-5lr_8k_latent-loss_7000s")
+TESTSET_DIR = Path("dataset/test")
+TEST_DIR = Path("tests")
+dirs = {
+    "gt": TESTSET_DIR / "diffuse",
+    "sd15_mlsd": TEST_DIR / "lllyasviel-sd-controlnet-mlsd",
+    "sd15_ours": TEST_DIR / "MrPio-Texture-Anything_CNet-SD15",
+    "sdxl_ours": TEST_DIR / "trainings-SDxl_CN_24bs_165e-5lr_2k_masked-loss-checkpoint-8200-controlnet",
+    "sdxl_mlsd_llite": TEST_DIR / "bdsqlsz_controlllite_xl_mlsd_V2.safetensors",
+    "sdxl_ours_llite": TEST_DIR / "sdxl_16bs_-5lr_2k.safetensors",
+}
+texture_dir = "sdxl_ours"
 
-(Path("renderings") / "gt").mkdir(exist_ok=True)
-(Path("renderings") / vanilla_dir.parts[-1]).mkdir(exist_ok=True)
-(Path("renderings") / trained_dir.parts[-1]).mkdir(exist_ok=True)
-(Path("renderings") / trained_dir2.parts[-1]).mkdir(exist_ok=True)
+out_dir = mkdir(f"renderings/{texture_dir}")
+dir = dirs[texture_dir]
 
-files = list(trained_dir.glob("*.png"))
-sample_files = files[:]
-
-for i, file in enumerate(sample_files):
-    uid = Path(file).stem
-    try:
-        obj = dataset[dict(uid=uid, preprocess=True)]
-        
-        if not (Path("renderings") / "gt" / f"{uid}.png").exists():
-            obj.change_texture(str(gt_dir / f"{uid}.png"))  # To remove any image other than diffuse
-            obj.render(views=1)[0].save(Path("renderings") / "gt" / f"{uid}.png")
-
-        if not (vanilla_dir / f"{uid}.png").exists() or not (trained_dir / f"{uid}.png").exists() or not (trained_dir2 / f"{uid}.png").exists():
-            continue
-        if not (Path("renderings") / vanilla_dir.parts[-1] / f"{uid}.png").exists():
-            obj.change_texture(str(vanilla_dir / f"{uid}.png"))
-            obj.render(views=1)[0].save(Path("renderings") / vanilla_dir.parts[-1] / f"{uid}.png")
-
-        if not (Path("renderings") / trained_dir.parts[-1] / f"{uid}.png").exists():
-            obj.change_texture(str(trained_dir / f"{uid}.png"))
-            obj.render(views=1)[0].save(Path("renderings") / trained_dir.parts[-1] / f"{uid}.png")
-
-        if not (Path("renderings") / trained_dir2.parts[-1] / f"{uid}.png").exists():
-            obj.change_texture(str(trained_dir2 / f"{uid}.png"))
-            obj.render(views=1)[0].save(Path("renderings") / trained_dir2.parts[-1] / f"{uid}.png")
-    except:
-        continue
+for file in tqdm(list(dir.glob("*.png"))):
+    uid = file.stem.split("_")[0]
+    obj = dataset[dict(uid=uid, preprocess=True)]
+    if obj and not (out_dir / f"{uid}_0.png").exists():
+        obj.change_texture(file)  # To remove any image other than diffuse
+        for i, view in enumerate(obj.render(views=3)):
+            view.save(out_dir / f"{uid}_{i}.png")
