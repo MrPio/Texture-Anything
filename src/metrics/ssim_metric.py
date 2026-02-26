@@ -8,7 +8,7 @@ class SSIMMetric(Metric):
     def __init__(self):
         super().__init__(need_renders=False)
         
-    def compute(self, y, gt) -> float:
+    def compute(self, y, gt, captions) -> float:
         metric = StructuralSimilarityIndexMeasure(data_range=1.0).to(self.device)
         score = metric(y.to(self.device), gt.to(self.device))
         return float(score.item())

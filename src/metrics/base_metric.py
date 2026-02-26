@@ -13,7 +13,7 @@ class Metric(ABC):
         self.device = device or "cuda" if torch.cuda.is_available() else "cpu"
 
     @abstractmethod
-    def compute(self, y: torch.Tensor, gt: torch.Tensor) -> float:
+    def compute(self, y: torch.Tensor, gt: torch.Tensor, captions: list[str]) -> float:
         """Compute and return a scalar metric value."""
 
     def __call__(self, *args, **kwargs) -> float:

@@ -8,7 +8,7 @@ class LPIPSMetric(Metric):
     def __init__(self):
         super().__init__(need_renders=False)
         
-    def compute(self, y, gt) -> float:
+    def compute(self, y, gt, captions) -> float:
         metric = LearnedPerceptualImagePatchSimilarity(
             net_type="alex",
             normalize=True,
