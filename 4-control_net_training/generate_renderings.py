@@ -11,13 +11,13 @@ TESTSET_DIR = Path("dataset/test")
 TEST_DIR = Path("tests")
 dirs = {
     "gt": TESTSET_DIR / "diffuse",
-    "sd15_mlsd": TEST_DIR / "lllyasviel-sd-controlnet-mlsd",
-    "sd15_ours": TEST_DIR / "MrPio-Texture-Anything_CNet-SD15",
-    "sdxl_ours": TEST_DIR / "trainings-SDxl_CN_24bs_165e-5lr_2k_masked-loss-checkpoint-8200-controlnet",
-    "sdxl_mlsd_llite": TEST_DIR / "bdsqlsz_controlllite_xl_mlsd_V2.safetensors",
-    "sdxl_ours_llite": TEST_DIR / "sdxl_16bs_-5lr_2k.safetensors",
+    "sd15_mlsd": TEST_DIR / "sd15_mlsd",
+    "sd15_ours": TEST_DIR / "sd15_ours",
+    "sdxl_ours": TEST_DIR / "sdxl_ours",
+    "sdxl_mlsd_llite": TEST_DIR / "sdxl_mlsd_llite",
+    "sdxl_ours_llite": TEST_DIR / "sdxl_ours_llite",
 }
-texture_dir = "sdxl_ours"
+texture_dir = "sdxl_mlsd_llite"
 
 out_dir = mkdir(f"renderings/{texture_dir}")
 dir = dirs[texture_dir]

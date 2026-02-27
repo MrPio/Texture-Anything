@@ -5,8 +5,8 @@ from .base_metric import Metric
 
 
 class PSNRMetric(Metric):
-    def __init__(self):
-        super().__init__(need_renders=False)
+    def __init__(self, need_renders=False):
+        super().__init__(need_renders=need_renders)
 
     def compute(self, y, gt, captions) -> float:
         metric = PeakSignalNoiseRatio(data_range=1.0).to(self.device)
