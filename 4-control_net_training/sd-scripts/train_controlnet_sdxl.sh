@@ -16,6 +16,7 @@ accelerate launch sdxl_train_control_net_lllite.py \
   --learning_rate=2e-5 \
   --output_dir="trainings" \
   --output_name="sdxl_16bs_-5lr_2k_inv"
+  # --resume="trainings/sdxl_16bs_-5lr_2k_inv-000005.safetensors"
 
 #   usage: sdxl_train_control_net_lllite.py [-h] [--console_log_level {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
 #                                         [--console_log_file CONSOLE_LOG_FILE] [--console_log_simple] [--v2]

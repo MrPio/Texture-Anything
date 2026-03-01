@@ -17,7 +17,7 @@ dirs = {
     "sdxl_mlsd_llite": TEST_DIR / "sdxl_mlsd_llite",
     "sdxl_ours_llite": TEST_DIR / "sdxl_ours_llite",
 }
-texture_dir = "sdxl_mlsd_llite"
+texture_dir = "sdxl_ours_llite"
 
 out_dir = mkdir(f"renderings/{texture_dir}")
 dir = dirs[texture_dir]

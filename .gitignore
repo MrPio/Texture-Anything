@@ -29,8 +29,10 @@ dataset/shapenetcore/**
 4-control_net_training/sd-scripts/dataset/
 4-control_net_training/sd-scripts/outputs/
 4-control_net_training/sd-scripts/trainings/
+4-control_net_training/sd-scripts/checkpoints/
 controlnet_sd15.log
 4-control_net_training/dataset.zip
 4-control_net_training/diffusers/
 controlnet_sdxl.log
 /**/*.safetensors
+/**/*.zip
