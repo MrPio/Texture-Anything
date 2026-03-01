@@ -10,9 +10,13 @@ import bpy
 
 
 def imshow(
-    images: list[Image.Image | np.ndarray | str | Path] | dict[Image.Image | np.ndarray | str | Path],
+    images: (
+        list[Image.Image | np.ndarray | str | Path]
+        | dict[Image.Image | np.ndarray | str | Path]
+    ),
     size=3,
     cols: int = None,
+    path: Path | None = None,
 ):
     """Plot a list of PIL images in a grid
 
@@ -38,10 +42,16 @@ def imshow(
         cols = min(10, len(images))
     rows = math.ceil(len(images) / cols)
     max_ratio = max(
-        (image.size[0] / image.size[1] if isinstance(image, (Image.Image)) else image.shape[0] / image.shape[1])
+        (
+            image.size[0] / image.size[1]
+            if isinstance(image, (Image.Image))
+            else image.shape[0] / image.shape[1]
+        )
         for image in images
     )
-    _, axes = plt.subplots(rows, cols, figsize=(cols * size, int(rows * size / max_ratio)))
+    _, axes = plt.subplots(
+        rows, cols, figsize=(cols * size, int(rows * size / max_ratio))
+    )
     if rows > 1 or cols > 1:
         axes = axes.flatten()
     else:
@@ -52,7 +62,11 @@ def imshow(
             axes[i].set_title(titles[i])
         axes[i].axis("off")
     plt.tight_layout()
-    plt.show()
+    if path:
+        plt.savefig(path)
+        plt.close()
+    else:
+        plt.show()
 
 
 def compute_image_density(img: Image.Image, threshold=0) -> float:
@@ -71,7 +85,9 @@ def is_textured(mesh):
         if not mat.use_nodes:
             continue
 
-        principled = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+        principled = next(
+            (n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None
+        )
         if not principled:
             continue
 
@@ -102,10 +118,14 @@ def is_white(obj):
 
 def bpy2pil(img: bpy.types.Image, remove_black=False) -> Image.Image:
     buffer = np.empty(len(img.pixels), dtype=np.float32)
-    img.pixels.foreach_get(buffer)  # MUCH faster than list(img.pixels) or np.array(img.pixels)
+    img.pixels.foreach_get(
+        buffer
+    )  # MUCH faster than list(img.pixels) or np.array(img.pixels)
 
     pixels = (buffer * 255).astype(np.uint8)
-    pixels = pixels.reshape((img.size[1], img.size[0], 4))  # PIL expects (height, width, channels)
+    pixels = pixels.reshape(
+        (img.size[1], img.size[0], 4)
+    )  # PIL expects (height, width, channels)
 
     if remove_black:
         mask = (pixels[:, :, :3] == 0).all(axis=2)
@@ -122,6 +142,7 @@ def is_outside_uv(vector, threshold=0.15):
         if not -threshold < coord < 1 + threshold:
             return True
     return False
+
 
 def mkdir(path: str | Path, clear=False) -> Path:
     """Creates the dir leading to a path recursively and returns it.
