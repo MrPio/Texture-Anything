@@ -13,7 +13,7 @@
 
 ## 📌 TL;DR
 
-The goal of this project is to train a ControlNet on UV conditioning in order to generate textures for a model given its UV map. The dataset is a mix of Objaverse and [ShapeNetCore](https://huggingface.co/datasets/ShapeNet/ShapeNetCore) and each sample is a triplet of _caption_, _uv map_ baked as image and _diffuse_ texture as ground truth.
+The goal of this project is to train a ControlNet on UV conditioning in order to generate textures for a model given its UV map. The dataset is a mix of Objaverse and [ShapeNetCore](https://huggingface.co/datasets/ShapeNet/ShapeNetCore) and each sample is a triplet of _caption_, _uv map_ baked as an image and _diffuse_ texture as ground truth.
 
 <p align="center">
     <img src="notes/img/objaverse.jpg" width="40%"></img>
@@ -22,7 +22,7 @@ The goal of this project is to train a ControlNet on UV conditioning in order to
 
 ## 📦 How this repository is structured
 
-The repository is structured in cronological sections, each containing several jupyter notebooks. The [`src`](src/) module contains the code of the classes that are instantiated throughout all the notebooks.
+The repository is structured in chronological sections, each containing several Jupyter notebooks. The [`src`](src/) module contains the code of the classes that are instantiated throughout all the notebooks.
 
 > [!NOTE]
 > **Execution Order**
