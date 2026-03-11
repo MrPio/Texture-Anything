@@ -1,6 +1,5 @@
 bl_info = {
     "name": "Texture Anything",
-    "author": "Valerio Morelli, Mattia Sbattella, Jacopo Coloccioni",
     "version": (1, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar > TextureAnything",
