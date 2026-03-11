@@ -1,9 +1,6 @@
 """
 Generate the dataset from the GLB objects having 1 mesh, 1 uv and 1 diffuse texture.
 This script is CWD-independent
-
-Author:
-    Valerio Morelli - February 6, 2026
 """
 
 from time import time_ns

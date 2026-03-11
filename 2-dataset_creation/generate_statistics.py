@@ -6,9 +6,6 @@ This script is CWD-independent.
 
 Usage:
     $ python generate_statistics.py
-
-Author:
-    Valerio Morelli - February 5, 2026
 """
 
 import argparse
