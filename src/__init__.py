@@ -1,8 +1,3 @@
-__author__ = "Valerio Morelli, Mattia Sbattella, Jacopo Coloccioni"
-__email__ = "valeriomorelli50@gmail.com"
-__license__ = "Apache-2.0"
-
-
 # Blender
 from .blender.scene import load_model, load_hdri
 from .blender.object3d.object3d import Object3D
