@@ -29,7 +29,9 @@ def load_target_model(args, accelerator, model_version: str, weight_dtype):
     model_dtype = match_mixed_precision(args, weight_dtype)  # prepare fp16/bf16
     for pi in range(accelerator.state.num_processes):
         if pi == accelerator.state.local_process_index:
-            logger.info(f"loading model for process {accelerator.state.local_process_index}/{accelerator.state.num_processes}")
+            logger.info(
+                f"loading model for process {accelerator.state.local_process_index}/{accelerator.state.num_processes}"
+            )
 
             (
                 load_stable_diffusion_format,
@@ -59,15 +61,33 @@ def load_target_model(args, accelerator, model_version: str, weight_dtype):
             clean_memory_on_device(accelerator.device)
         accelerator.wait_for_everyone()
 
-    return load_stable_diffusion_format, text_encoder1, text_encoder2, vae, unet, logit_scale, ckpt_info
+    return (
+        load_stable_diffusion_format,
+        text_encoder1,
+        text_encoder2,
+        vae,
+        unet,
+        logit_scale,
+        ckpt_info,
+    )
 
 
 def _load_target_model(
-    name_or_path: str, vae_path: Optional[str], model_version: str, weight_dtype, device="cpu", model_dtype=None, disable_mmap=False
+    name_or_path: str,
+    vae_path: Optional[str],
+    model_version: str,
+    weight_dtype,
+    device="cpu",
+    model_dtype=None,
+    disable_mmap=False,
 ):
     # model_dtype only work with full fp16/bf16
-    name_or_path = os.readlink(name_or_path) if os.path.islink(name_or_path) else name_or_path
-    load_stable_diffusion_format = os.path.isfile(name_or_path)  # determine SD or Diffusers
+    name_or_path = (
+        os.readlink(name_or_path) if os.path.islink(name_or_path) else name_or_path
+    )
+    load_stable_diffusion_format = os.path.isfile(
+        name_or_path
+    )  # determine SD or Diffusers
 
     if load_stable_diffusion_format:
         logger.info(f"load StableDiffusion checkpoint: {name_or_path}")
@@ -78,22 +98,35 @@ def _load_target_model(
             unet,
             logit_scale,
             ckpt_info,
-        ) = sdxl_model_util.load_models_from_sdxl_checkpoint(model_version, name_or_path, device, model_dtype, disable_mmap)
+        ) = sdxl_model_util.load_models_from_sdxl_checkpoint(
+            model_version, name_or_path, device, model_dtype, disable_mmap
+        )
     else:
         # Diffusers model is loaded to CPU
         from diffusers import StableDiffusionXLPipeline
 
         variant = "fp16" if weight_dtype == torch.float16 else None
-        logger.info(f"load Diffusers pretrained models: {name_or_path}, variant={variant}")
+        logger.info(
+            f"load Diffusers pretrained models: {name_or_path}, variant={variant}"
+        )
         try:
             try:
                 pipe = StableDiffusionXLPipeline.from_pretrained(
-                    name_or_path, torch_dtype=model_dtype, variant=variant, tokenizer=None, cache_dir="/home/vmorelli-iit.local/Projects/Texture-Anything/.huggingface"
+                    name_or_path,
+                    torch_dtype=model_dtype,
+                    variant=variant,
+                    tokenizer=None,
+                    cache_dir="/../../../.huggingface",
                 )
             except EnvironmentError as ex:
                 if variant is not None:
                     logger.info("try to load fp32 model")
-                    pipe = StableDiffusionXLPipeline.from_pretrained(name_or_path, variant=None, tokenizer=None, cache_dir="/home/vmorelli-iit.local/Projects/Texture-Anything/.huggingface")
+                    pipe = StableDiffusionXLPipeline.from_pretrained(
+                        name_or_path,
+                        variant=None,
+                        tokenizer=None,
+                        cache_dir="/../../../.huggingface",
+                    )
                 else:
                     raise ex
         except EnvironmentError as ex:
@@ -116,10 +149,14 @@ def _load_target_model(
         del pipe
 
         # Diffusers U-Net to original U-Net
-        state_dict = sdxl_model_util.convert_diffusers_unet_state_dict_to_sdxl(unet.state_dict())
+        state_dict = sdxl_model_util.convert_diffusers_unet_state_dict_to_sdxl(
+            unet.state_dict()
+        )
         with init_empty_weights():
             unet = sdxl_original_unet.SdxlUNet2DConditionModel()  # overwrite unet
-        sdxl_model_util._load_state_dict_on_device(unet, state_dict, device=device, dtype=model_dtype)
+        sdxl_model_util._load_state_dict_on_device(
+            unet, state_dict, device=device, dtype=model_dtype
+        )
         logger.info("U-Net converted to original U-Net")
 
         logit_scale = None
@@ -130,7 +167,15 @@ def _load_target_model(
         vae = model_util.load_vae(vae_path, weight_dtype)
         logger.info("additional VAE loaded")
 
-    return load_stable_diffusion_format, text_encoder1, text_encoder2, vae, unet, logit_scale, ckpt_info
+    return (
+        load_stable_diffusion_format,
+        text_encoder1,
+        text_encoder2,
+        vae,
+        unet,
+        logit_scale,
+        ckpt_info,
+    )
 
 
 def load_tokenizers(args: argparse.Namespace):
@@ -141,20 +186,30 @@ def load_tokenizers(args: argparse.Namespace):
     for i, original_path in enumerate(original_paths):
         tokenizer: CLIPTokenizer = None
         if args.tokenizer_cache_dir:
-            local_tokenizer_path = os.path.join(args.tokenizer_cache_dir, original_path.replace("/", "_"))
+            local_tokenizer_path = os.path.join(
+                args.tokenizer_cache_dir, original_path.replace("/", "_")
+            )
             if os.path.exists(local_tokenizer_path):
                 logger.info(f"load tokenizer from cache: {local_tokenizer_path}")
-                tokenizer = CLIPTokenizer.from_pretrained(local_tokenizer_path, cache_dir="/home/vmorelli-iit.local/Projects/Texture-Anything/.huggingface")
+                tokenizer = CLIPTokenizer.from_pretrained(
+                    local_tokenizer_path,
+                    cache_dir="/../../../.huggingface",
+                )
 
         if tokenizer is None:
-            tokenizer = CLIPTokenizer.from_pretrained(original_path, cache_dir="/home/vmorelli-iit.local/Projects/Texture-Anything/.huggingface")
+            tokenizer = CLIPTokenizer.from_pretrained(
+                original_path,
+                cache_dir="/../../../.huggingface",
+            )
 
         if args.tokenizer_cache_dir and not os.path.exists(local_tokenizer_path):
             logger.info(f"save Tokenizer to cache: {local_tokenizer_path}")
             tokenizer.save_pretrained(local_tokenizer_path)
 
         if i == 1:
-            tokenizer.pad_token_id = 0  # fix pad token id to make same as open clip tokenizer
+            tokenizer.pad_token_id = (
+                0  # fix pad token id to make same as open clip tokenizer
+            )
 
         tokeniers.append(tokenizer)
 
@@ -189,9 +244,11 @@ def timestep_embedding(timesteps, dim, max_period=10000):
     :return: an [N x dim] Tensor of positional embeddings.
     """
     half = dim // 2
-    freqs = torch.exp(-math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half).to(
-        device=timesteps.device
-    )
+    freqs = torch.exp(
+        -math.log(max_period)
+        * torch.arange(start=0, end=half, dtype=torch.float32)
+        / half
+    ).to(device=timesteps.device)
     args = timesteps[:, None].float() * freqs[None]
     embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
     if dim % 2:
@@ -232,7 +289,9 @@ def save_sd_model_on_train_end(
     ckpt_info,
 ):
     def sd_saver(ckpt_file, epoch_no, global_step):
-        sai_metadata = train_util.get_sai_model_spec(None, args, True, False, False, is_stable_diffusion_ckpt=True)
+        sai_metadata = train_util.get_sai_model_spec(
+            None, args, True, False, False, is_stable_diffusion_ckpt=True
+        )
         sdxl_model_util.save_stable_diffusion_checkpoint(
             ckpt_file,
             text_encoder1,
@@ -260,7 +319,13 @@ def save_sd_model_on_train_end(
         )
 
     train_util.save_sd_model_on_train_end_common(
-        args, save_stable_diffusion_format, use_safetensors, epoch, global_step, sd_saver, diffusers_saver
+        args,
+        save_stable_diffusion_format,
+        use_safetensors,
+        epoch,
+        global_step,
+        sd_saver,
+        diffusers_saver,
     )
 
 
@@ -285,7 +350,9 @@ def save_sd_model_on_epoch_end_or_stepwise(
     ckpt_info,
 ):
     def sd_saver(ckpt_file, epoch_no, global_step):
-        sai_metadata = train_util.get_sai_model_spec(None, args, True, False, False, is_stable_diffusion_ckpt=True)
+        sai_metadata = train_util.get_sai_model_spec(
+            None, args, True, False, False, is_stable_diffusion_ckpt=True
+        )
         sdxl_model_util.save_stable_diffusion_checkpoint(
             ckpt_file,
             text_encoder1,
@@ -326,7 +393,9 @@ def save_sd_model_on_epoch_end_or_stepwise(
     )
 
 
-def add_sdxl_training_arguments(parser: argparse.ArgumentParser, support_text_encoder_caching: bool = True):
+def add_sdxl_training_arguments(
+    parser: argparse.ArgumentParser, support_text_encoder_caching: bool = True
+):
     if support_text_encoder_caching:
         parser.add_argument(
             "--cache_text_encoder_outputs",
@@ -345,11 +414,17 @@ def add_sdxl_training_arguments(parser: argparse.ArgumentParser, support_text_en
     )
 
 
-def verify_sdxl_training_args(args: argparse.Namespace, support_text_encoder_caching: bool = True):
-    assert not args.v2, "v2 cannot be enabled in SDXL training / SDXL学習ではv2を有効にすることはできません"
+def verify_sdxl_training_args(
+    args: argparse.Namespace, support_text_encoder_caching: bool = True
+):
+    assert (
+        not args.v2
+    ), "v2 cannot be enabled in SDXL training / SDXL学習ではv2を有効にすることはできません"
 
     if args.clip_skip is not None:
-        logger.warning("clip_skip will be unexpected / SDXL学習ではclip_skipは動作しません")
+        logger.warning(
+            "clip_skip will be unexpected / SDXL学習ではclip_skipは動作しません"
+        )
 
     # if args.multires_noise_iterations:
     #     logger.info(
@@ -369,7 +444,10 @@ def verify_sdxl_training_args(args: argparse.Namespace, support_text_encoder_cac
     # ), "weighted_captions cannot be enabled in SDXL training currently / SDXL学習では今のところweighted_captionsを有効にすることはできません"
 
     if support_text_encoder_caching:
-        if args.cache_text_encoder_outputs_to_disk and not args.cache_text_encoder_outputs:
+        if (
+            args.cache_text_encoder_outputs_to_disk
+            and not args.cache_text_encoder_outputs
+        ):
             args.cache_text_encoder_outputs = True
             logger.warning(
                 "cache_text_encoder_outputs is enabled because cache_text_encoder_outputs_to_disk is enabled / "
@@ -378,6 +456,10 @@ def verify_sdxl_training_args(args: argparse.Namespace, support_text_encoder_cac
 
 
 def sample_images(*args, **kwargs):
-    from library.sdxl_lpw_stable_diffusion import SdxlStableDiffusionLongPromptWeightingPipeline
+    from library.sdxl_lpw_stable_diffusion import (
+        SdxlStableDiffusionLongPromptWeightingPipeline,
+    )
 
-    return train_util.sample_images_common(SdxlStableDiffusionLongPromptWeightingPipeline, *args, **kwargs)
+    return train_util.sample_images_common(
+        SdxlStableDiffusionLongPromptWeightingPipeline, *args, **kwargs
+    )

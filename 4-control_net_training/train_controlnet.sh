@@ -17,12 +17,10 @@
 
 export SD_MODEL="stable-diffusion-v1-5/stable-diffusion-v1-5"
 export CNET_MODEL="lllyasviel/sd-controlnet-mlsd"
-export CACHE_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/.huggingface"
-export DATASET_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/dataset"
+export CACHE_DIR="../.huggingface"
+export DATASET_DIR="dataset"
 
-export OUTPUT_DIR="/leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training/trainings/SD1.5_CNmlsd_64bs_1e-5lr_8k_combined-loss"
-
-cd /leonardo_scratch/fast/IscrC_MACRO/Texture-Anything/4-control_net_training
+export OUTPUT_DIR="trainings/SD1.5_CNmlsd_64bs_1e-5lr_8k_combined-loss"
 
 # accelerate launch train_controlnet.py \
 accelerate launch --mixed_precision="fp16" --num_processes=2 train_controlnet.py \
