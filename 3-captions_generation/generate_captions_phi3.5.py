@@ -13,9 +13,6 @@ Based on
 
 Dependency:
     pip install "transformers==4.43.0"
-
-Author:
-    Valerio Morelli - February 6, 2026
 """
 import argparse
 import json

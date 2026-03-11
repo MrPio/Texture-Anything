@@ -14,9 +14,6 @@ Arguments:
 
 Environment:
     Requires access to CUDA-compatible GPUs and pre-cached models via Hugging Face.
-
-Author:
-    Valerio Morelli - 2025-05-11
 """
 
 import argparse

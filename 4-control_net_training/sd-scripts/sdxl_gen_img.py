@@ -2243,7 +2243,7 @@ def main(args):
             if image.mode != "RGB":
                 logger.info(f"convert image to RGB from {image.mode}: {p}")
                 image = image.convert("RGB")
-            image = PIL.ImageOps.invert(image)  # MrPio
+            image = PIL.ImageOps.invert(image)
             image.save("tmp.png")
             images.append(image)
 
